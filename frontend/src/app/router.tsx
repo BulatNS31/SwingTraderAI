@@ -6,7 +6,7 @@ import { WatchlistPage } from '@/pages/watchlist'
 import { PortfolioPage } from '@/pages/portfolio'
 import { MarketsPage } from '@/pages/markets'
 import { AnalyticsPage } from '@/pages/analytics'
-import { AICopilotPage } from '@/pages/ai-copilot'
+import { AIChatPage } from '@/pages/ai-chat'
 import { ScannerPage } from '@/pages/scanner'
 import { SignalsPage } from '@/pages/signals'
 import { AILabPage } from '@/pages/ai-lab'
@@ -39,7 +39,7 @@ export const router = createBrowserRouter([
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'markets', element: <MarketsPage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
-      { path: 'copilot', element: <AICopilotPage /> },
+      { path: 'ai-chat', element: <AIChatPage /> },
       { path: 'scanner', element: <ScannerPage /> },
       { path: 'signals', element: <SignalsPage /> },
       { path: 'ai-lab', element: <AILabPage /> },

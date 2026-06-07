@@ -106,7 +106,7 @@ class IndicatorService:
 
 		return [
 			SignalOut(
-				type=signal_type,  # теперь гарантированно Literal
+				type=signal_type,
 				strength=strength,
 				message=message,
 				indicators_used=list(indicator_results.keys()),

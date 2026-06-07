@@ -1,194 +1,226 @@
-import { ArrowUpRight, ArrowDownRight, TrendingUp, ShieldCheck } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowUpRight, ArrowDownRight, TrendingUp, Calendar } from 'lucide-react'
 
+import { DonutChart } from "@/shared/ui/donut-chart"
 import {
   GlassCard,
   SectionHeader,
-  LivePulseIndicator,
 } from '@/shared/ui'
 
-import { usePortfolioPositions, usePortfolioSummary } from '@/features/portfolio/hooks/portfolio-hooks'
+import { usePortfolioSummary, usePortfolioPositions } from '@/features/portfolio/hooks/portfolio-hooks'
 
-function formatCurrency(value: number): string {
-  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
-}
+const tabs = ['Обзор', 'Доход', 'Результат', 'Новости', 'Инвестиции'] as const
+type TabType = typeof tabs[number]
 
 export function PortfolioPage() {
+  const [activeTab, setActiveTab] = useState<TabType>('Обзор')
+
   const summaryQuery = usePortfolioSummary()
   const positionsQuery = usePortfolioPositions()
 
   const summary = summaryQuery.data
   const positions = positionsQuery.data ?? []
 
-  // Sorted copies for best/worst performers
-  const sortedByPnL = [...positions].sort((a, b) => b.pnl_percent - a.pnl_percent)
-  const bestPosition = sortedByPnL[0]
-  const worstPosition = sortedByPnL[sortedByPnL.length - 1]
-  const largestAllocation = positions.length > 0
-    ? Math.max(...positions.map((p) => Number(p.allocation_percent ?? 0)))
-    : 0
+  const totalInvested = 41482.4
+  const totalCurrent = 39469.2
+  const totalResultPercent = -4.85
+  const totalResultRub = -2013.3
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-8">
+      {/* Header + Tabs */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Портфель</h1>
-        <p className="text-slate-400 mt-1">
-          Анализ позиций, распределения и рисков в режиме реального времени.
-        </p>
+        <p className="text-slate-400 mt-1">Обзор и анализ вашего инвестиционного портфеля</p>
+
+        {/* Tabs */}
+        <div className="flex gap-8 mt-6 border-b border-slate-800">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`pb-4 text-sm font-medium transition-colors relative ${
+                activeTab === tab
+                  ? 'text-white after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:bg-blue-500'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid gap-6 sm:grid-cols-3">
+      {/* Основные показатели */}
+      <GlassCard>
+        <div className="p-6">
+          <SectionHeader title="Основные показатели" />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-8">
+            <div>
+              <p className="text-sm text-slate-400">Вложено</p>
+              <p className="text-3xl font-bold mt-2">{totalInvested.toLocaleString('ru-RU')} ₽</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-slate-400">Сейчас</p>
+              <p className="text-3xl font-bold mt-2">{totalCurrent.toLocaleString('ru-RU')} ₽</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-slate-400">Результат</p>
+              <div className="flex items-center gap-3 mt-2">
+                <p className={`text-3xl font-bold ${totalResultPercent >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {totalResultPercent}%
+                </p>
+                <p className={`text-xl ${totalResultPercent >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {totalResultRub.toLocaleString('ru-RU')} ₽
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm text-slate-400">Доход на 12М</p>
+              <p className="text-3xl font-bold mt-2 text-emerald-400">2 808,8 ₽</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-10 pt-8 border-t border-slate-800">
+            <div>
+              <p className="text-sm text-slate-400">Рыночная доходность за 12М</p>
+              <p className="text-2xl font-semibold mt-1">7,1%</p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-400">Ваша доходность за 12М</p>
+              <p className="text-2xl font-semibold mt-1">6,8%</p>
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Ближайшие выплаты */}
+      <GlassCard>
+        <div className="p-6">
+          <SectionHeader
+            title="Ближайшие выплаты"
+            action={<Calendar className="h-5 w-5 text-slate-400" />}
+          />
+
+          <div className="mt-6 overflow-x-auto">
+            <table className="w-full min-w-[700px]">
+              <thead>
+                <tr className="border-b border-slate-800 text-left text-sm text-slate-400">
+                  <th className="pb-4 font-medium">Компания</th>
+                  <th className="pb-4 font-medium">Выплата</th>
+                  <th className="pb-4 font-medium">Статус</th>
+                  <th className="pb-4 font-medium text-right">Доход</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800 text-sm">
+                {[
+                  { company: 'Татнефть TATN', date: '29 июл 2026', status: 'объявлено', income: '10,1 ₽' },
+                  { company: 'Сбербанк SBER', date: '3 авг 2026', status: 'объявлено', income: '2 619,7 ₽' },
+                  { company: 'Яндекс YDEX', date: '13 окт 2026', status: 'прогноз', income: '162,2 ₽' },
+                  { company: 'Татнефть TATN', date: '28 окт 2026', status: 'прогноз', income: '16,76 ₽' },
+                ].map((item, i) => (
+                  <tr key={i} className="hover:bg-slate-900/50">
+                    <td className="py-4 font-medium">{item.company}</td>
+                    <td className="py-4 text-slate-400">{item.date}</td>
+                    <td className="py-4">
+                      <span className="px-3 py-1 rounded-full bg-slate-800 text-xs">
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="py-4 text-right font-medium">{item.income}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Блоки с распределением */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Структура дохода */}
         <GlassCard>
           <div className="p-6">
-            <p className="text-sm text-slate-400">Общий капитал</p>
-            <div className="mt-3 flex items-baseline justify-between">
-              <p className="text-3xl font-bold text-white">
-                {summary ? formatCurrency(summary.total_value) : '—'}
-              </p>
-              <p
-                className={`text-sm font-semibold flex items-center gap-1 ${
-                  (summary?.day_change_percent ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                }`}
-              >
-                {(summary?.day_change_percent ?? 0) >= 0 ? (
-                  <ArrowUpRight className="h-4 w-4" />
-                ) : (
-                  <ArrowDownRight className="h-4 w-4" />
-                )}
-                {(summary?.day_change_percent ?? 0) >= 0 ? '+' : ''}
-                {summary?.day_change_percent ?? 0}%
-              </p>
+            <SectionHeader title="Структура дохода" />
+              <div className="mt-8 flex justify-center">
+              <DonutChart
+                data={[
+                  { name: 'Финансы', value: 3000 },
+                ]}
+                value="value"
+                category="name"
+                colors={[
+                  "blue",
+                ]}
+                className="h-72 w-72"
+                showTooltip
+                showLabel
+              />
+            </div>
+            <div className="mt-8 flex flex-col gap-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium">Дивиденды</p>
+                  <p className="text-sm text-slate-400">100% дохода</p>
+                </div>
+                <p className="text-2xl font-bold">3К ₽</p>
+              </div>
             </div>
           </div>
         </GlassCard>
 
-        <GlassCard>
-          <div className="p-6">
-            <p className="text-sm text-slate-400">Нереализованный P&L</p>
-            <div className="mt-3 flex items-baseline justify-between">
-              <p className="text-3xl font-bold text-emerald-400">
-                {summary ? formatCurrency(summary.total_pnl) : '—'}
-              </p>
-              <p className="text-sm font-semibold text-emerald-300">
-                {summary?.win_rate ?? 0}% процент побед
-              </p>
-            </div>
-          </div>
-        </GlassCard>
-
-        <GlassCard>
-          <div className="p-6">
-            <p className="text-sm text-slate-400">Открытые позиции</p>
-            <div className="mt-3 flex items-baseline justify-between">
-              <p className="text-3xl font-bold text-white">{positions.length}</p>
-              <p className="text-sm font-semibold text-slate-400">Avg ~32% each</p>
-            </div>
-          </div>
-        </GlassCard>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[1.65fr_1fr]">
-        {/* Open Positions */}
-        <GlassCard>
-          <div className="p-6">
-            <SectionHeader
-              title="Открытые позиции"
-              description={`${positions.length} активных позиций`}
-              action={<TrendingUp className="h-4 w-4 text-slate-400" />}
-            />
-
-            <div className="mt-6 space-y-4">
-              {positions.length === 0 ? (
-                <p className="text-slate-400 py-8 text-center">Нет открытых позиций</p>
-              ) : (
-                positions.map((position) => {
-                  const isGain = position.pnl >= 0
-
-                  return (
-                    <div
-                      key={position.id}
-                      className="rounded-2xl bg-slate-900/50 border border-slate-800 p-5 hover:border-slate-700 transition"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-bold text-lg">{position.ticker.symbol}</h4>
-                          <LivePulseIndicator active={isGain} size="sm" />
-                        </div>
-
-                        <span
-                          className={`text-xs font-medium px-3 py-1 rounded-full ${
-                            isGain
-                              ? 'bg-emerald-900/60 text-emerald-300'
-                              : 'bg-rose-900/60 text-rose-300'
-                          }`}
-                        >
-                          {position.allocation_percent}%
-                        </span>
-                      </div>
-
-                      <p className="text-sm text-slate-500 mt-1">{position.ticker.name}</p>
-
-                      <div className="grid grid-cols-3 gap-4 mt-5 text-sm">
-                        <div>
-                          <p className="text-slate-500 text-xs">Quantity</p>
-                          <p className="font-semibold mt-1">
-                            {position.quantity.toFixed(position.quantity < 1 ? 4 : 2)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-slate-500 text-xs">Avg Entry</p>
-                          <p className="font-semibold mt-1">
-                            ${position.avg_price.toFixed(2)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-slate-500 text-xs">Текущий</p>
-                          <p className="font-semibold mt-1">
-                            ${position.current_price.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 pt-4 border-t border-slate-800 flex justify-between">
-                        <div>
-                          <p className="text-xs text-slate-500">P&L</p>
-                          <p className={`font-bold text-base ${isGain ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {isGain ? '+' : ''}{formatCurrency(position.pnl)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-slate-500">Возвращаться</p>
-                          <p className={`font-bold text-base ${isGain ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {isGain ? '+' : ''}{position.pnl_percent.toFixed(2)}%
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </div>
-        </GlassCard>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Allocation */}
-          <GlassCard>
+        {/* Распределение по активам */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Круговая диаграмма */}
+          <GlassCard className="lg:col-span-2">
             <div className="p-6">
-              <SectionHeader title="Распределение" description="По весу позиции" />
-              <div className="mt-6 space-y-5">
-                {positions.map((position) => (
-                  <div key={position.id}>
+              <SectionHeader title="Распределение по активам" />
+              <div className="mt-8 flex justify-center">
+                <DonutChart
+                  data={[
+                    { name: 'Сбербанк', value: 65.3 },
+                    { name: 'Яндекс', value: 20.2 },
+                    { name: 'ВК', value: 11.3 },
+                    { name: 'Северсталь', value: 1.7 },
+                    { name: 'Татнефть', value: 1.5 },
+                  ]}
+                  value="value"
+                  category="name"
+                  colors={[
+                    "blue",
+                    "cyan",
+                    "violet",
+                    "amber",
+                    "emerald",
+                  ]}
+                  className="h-72 w-72"
+                  showTooltip
+                  showLabel
+                />
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="mt-6 space-y-6">
+                {[
+                  { name: 'Сбербанк', percent: 65.3, color: 'bg-blue-500' },
+                  { name: 'Яндекс', percent: 20.2, color: 'bg-cyan-500' },
+                  { name: 'ВК', percent: 11.3, color: 'bg-violet-500' },
+                  { name: 'Северсталь', percent: 1.7, color: 'bg-amber-500' },
+                  { name: 'Татнефть', percent: 1.5, color: 'bg-emerald-500' },
+                ].map((asset) => (
+                  <div key={asset.name}>
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="font-medium">{position.ticker.symbol}</span>
-                      <span className="text-slate-400">{position.allocation_percent}%</span>
+                      <span className="font-medium">{asset.name}</span>
+                      <span className="font-semibold text-white">{asset.percent}%</span>
                     </div>
-                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full"
-                        style={{ width: `${position.allocation_percent}%` }}
+                        className={`h-full ${asset.color} rounded-full transition-all`}
+                        style={{ width: `${asset.percent}%` }}
                       />
                     </div>
                   </div>
@@ -196,57 +228,47 @@ export function PortfolioPage() {
               </div>
             </div>
           </GlassCard>
-
-          {/* Performance */}
-          <GlassCard>
-            <div className="p-6">
-              <SectionHeader title="Performance" description="Top & bottom performers" />
-              <div className="mt-6 space-y-4">
-                {bestPosition && (
-                  <div className="rounded-2xl bg-emerald-950/50 border border-emerald-900/50 p-4">
-                    <p className="text-xs text-emerald-400">Лучший performer</p>
-                    <p className="text-lg font-semibold mt-1">{bestPosition.ticker.symbol}</p>
-                    <p className="text-emerald-400">+{bestPosition.pnl_percent.toFixed(2)}%</p>
-                  </div>
-                )}
-
-                {worstPosition && (
-                  <div className="rounded-2xl bg-rose-950/50 border border-rose-900/50 p-4">
-                    <p className="text-xs text-rose-400">Худший performer</p>
-                    <p className="text-lg font-semibold mt-1">{worstPosition.ticker.symbol}</p>
-                    <p className="text-rose-400">{worstPosition.pnl_percent.toFixed(2)}%</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </GlassCard>
         </div>
       </div>
 
-      {/* Risk Analysis */}
+      {/* Распределение по секторам */}
       <GlassCard>
         <div className="p-6">
-          <SectionHeader
-            title="Risk Analysis"
-            description="Portfolio exposure and concentration"
-            action={<ShieldCheck className="h-4 w-4 text-slate-400" />}
-          />
-
-          <div className="grid gap-6 sm:grid-cols-3 mt-8">
-            <div className="text-center">
-              <p className="text-4xl font-bold text-orange-400">
-                {largestAllocation.toFixed(1)}%
-              </p>
-              <p className="text-sm text-slate-400 mt-2">Largest Position</p>
-            </div>
-            <div className="text-center">
-              <p className="text-4xl font-bold text-blue-400">{positions.length}</p>
-              <p className="text-sm text-slate-400 mt-2">Diversified Assets</p>
-            </div>
-            <div className="text-center">
-              <p className="text-4xl font-bold text-emerald-400">{summary?.win_rate ?? 0}%</p>
-              <p className="text-sm text-slate-400 mt-2">Win Rate</p>
-            </div>
+          <SectionHeader title="Распределение по секторам" />
+          <div className="mt-8 flex justify-center">
+            <DonutChart
+              data={[
+                { name: 'Финансы', value: 65.3 },
+                { name: 'Технологии', value: 31.4 },
+                { name: 'Добыча металлов', value: 1.7 },
+                { name: 'Нефть и газ', value: 1.5 },
+              ]}
+              value="value"
+              category="name"
+              colors={[
+                "blue",
+                "cyan",
+                "violet",
+                "amber",
+                "emerald",
+              ]}
+              className="h-72 w-72"
+              showTooltip
+              showLabel
+            />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8">
+            {[
+              { sector: 'Финансы', percent: 65.3 },
+              { sector: 'Технологии', percent: 31.4 },
+              { sector: 'Добыча металлов', percent: 1.7 },
+              { sector: 'Нефть и газ', percent: 1.5 },
+            ].map((item) => (
+              <div key={item.sector} className="text-center">
+                <div className="text-4xl font-bold text-white">{item.percent}%</div>
+                <p className="text-slate-400 mt-2">{item.sector}</p>
+              </div>
+            ))}
           </div>
         </div>
       </GlassCard>

@@ -102,7 +102,7 @@ alembic upgrade head
 
 4. **Run**
 ```bash
-uvicorn swingtraderai.main:app --reload
+uvicorn swingtraderai.main:app --reload # --port 7123
 
 python -m bots.telegram.bot
 

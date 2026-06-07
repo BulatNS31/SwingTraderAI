@@ -176,8 +176,8 @@
 
   .input:focus-visible {
     outline: none;
-    ring: 2px solid hsl(var(--ring));
-    ring-offset: 2px;
+    box-shadow: 0 0 0 2px hsl(var(--ring)), 0 0 0 4px hsl(var(--ring) / 0.2);
+    box-shadow: 0 0 0 2px hsl(var(--ring));
   }
 
   .input:disabled {
@@ -247,6 +247,45 @@ h2 {
 }
 p {
   margin: 0;
+}
+
+.recharts-sector path {
+  stroke: transparent !important;
+}
+
+.dark .recharts-sector {
+  fill-opacity: 1 !important;
+}
+
+/* Анимация для тултипа */
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tooltipFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.95);
+  }
+}
+
+.recharts-tooltip-wrapper {
+  animation: tooltipFadeIn 0.2s ease-out;
+}
+
+.recharts-tooltip-wrapper-hidden {
+  animation: tooltipFadeOut 0.15s ease-in;
 }
 
 code,

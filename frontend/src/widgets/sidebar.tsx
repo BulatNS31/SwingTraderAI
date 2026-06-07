@@ -43,7 +43,7 @@ const groups = [
   {
     title: 'AI & Research',
     items: [
-      { name: 'AI Chat', href: '/copilot', icon: Sparkles },
+      { name: 'AI Chat', href: '/ai-chat', icon: Sparkles },
       { name: 'Сигналы', href: '/signals', icon: Radar },
       { name: 'AI Lab', href: '/ai-lab', icon: Cpu },
       { name: 'Стратегии', href: '/strategies', icon: Users },
