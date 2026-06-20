@@ -25,6 +25,7 @@ from uuid6 import uuid7
 
 from swingtraderai.db.base import TenantBase
 from swingtraderai.db.models.market import Ticker
+from swingtraderai.db.models.portfolio import Portfolio
 
 
 class UserRole(str, PyEnum):
@@ -106,6 +107,9 @@ class User(TenantBase):
 	positions: Mapped[list["Position"]] = relationship(
 		"Position", back_populates="user", cascade="all, delete-orphan"
 	)
+	portfolios: Mapped[list["Portfolio"]] = relationship(
+		"Portfolio", back_populates="user", cascade="all, delete-orphan"
+	)
 
 	# Индексы для частых запросов
 	__table_args__ = (
@@ -157,6 +161,12 @@ class Position(TenantBase):
 	notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 	user: Mapped[User] = relationship("User", back_populates="positions")
+	portfolio_id: Mapped[UUID | None] = mapped_column(
+		ForeignKey("portfolios.id", ondelete="SET NULL"), nullable=True, index=True
+	)
+	portfolio: Mapped[Portfolio | None] = relationship(
+		"Portfolio", back_populates="positions"
+	)
 	ticker: Mapped[Ticker] = relationship("Ticker")
 
 	__table_args__ = (

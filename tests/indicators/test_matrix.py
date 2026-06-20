@@ -51,7 +51,7 @@ def test_engineer_features_basic(sample_ohlcv_features):
 
 def test_add_target(sample_ohlcv_features):
 	df = engineer_features(sample_ohlcv_features)
-	result = add_target(df, horizon=5, threshold=0.008)
+	result = add_target(df, horizon=5, use_triple_barrier=False, threshold=0.008)
 
 	assert "future_return" in result.columns
 	assert "target" in result.columns

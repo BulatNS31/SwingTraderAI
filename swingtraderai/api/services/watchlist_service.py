@@ -249,13 +249,8 @@ class WatchlistService:
 		trend_subq = (
 			select(
 				MarketData.ticker_id,
-				func.array_agg(MarketData.close)
-				.over(
-					partition_by=MarketData.ticker_id,
-					order_by=MarketData.timestamp.desc(),
-				)
-				.label("trend"),
-			)
+				func.array_agg(MarketData.close).label("trend"),
+			).group_by(MarketData.ticker_id)
 		).subquery()
 
 		stmt = (

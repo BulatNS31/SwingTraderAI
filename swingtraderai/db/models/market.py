@@ -12,6 +12,7 @@ from sqlalchemy.sql import func
 from uuid6 import uuid7
 
 from swingtraderai.db.base import Base
+from swingtraderai.db.models.market_quote import MarketQuoteSnapshot
 
 if TYPE_CHECKING:
 	from swingtraderai.db.models.system import WatchlistItem
@@ -42,6 +43,9 @@ class Ticker(Base):
 		back_populates="ticker",
 		cascade="all, delete-orphan",
 		lazy="select",
+	)
+	market_quote_snapshot: Mapped[Optional["MarketQuoteSnapshot"]] = relationship(
+		"MarketQuoteSnapshot", back_populates="ticker", uselist=False, lazy="selectin"
 	)
 
 	__table_args__ = (

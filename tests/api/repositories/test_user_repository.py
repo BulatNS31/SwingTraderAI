@@ -1,11 +1,11 @@
-import pytest
+import pytest_asyncio
 
 from swingtraderai.api.repositories.user_repository import UserRepository
 from swingtraderai.db.models.user import User
 
 
-@pytest.fixture
-def user_repo(session):
+@pytest_asyncio.fixture
+async def user_repo(session):
 	return UserRepository(session)
 
 

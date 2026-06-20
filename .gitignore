@@ -52,6 +52,11 @@ events.out.tfevents.*
 pip-log.txt
 pip-delete-this-directory.txt
 
+AGENT.md
+CHANGELOG.md
+.continue
+
+
 # Unit test / coverage reports
 htmlcov/
 .tox/
@@ -100,6 +105,8 @@ alembic/versions/
 # IPython
 profile_default/
 ipython_config.py
+
+schema.sql
 
 # pyenv
 #   For a library or package, you might want to ignore these files since the code is

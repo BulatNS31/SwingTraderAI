@@ -91,7 +91,7 @@ class TenantAwareRepository(Generic[TenantModelType]):
 		return select(self.model).where(self.model.tenant_id == tenant_id)
 
 	async def get_by_id(self, tenant_id: UUID, id: UUID) -> Optional[TenantModelType]:
-		id_column = getattr(self.model, "id", None)
+		id_column = getattr(self.model, "ticker_id", None)
 		if id_column is None:
 			raise AttributeError(
 				f"Model {self.model.__name__} must have an 'id' column"
@@ -115,10 +115,16 @@ class TenantAwareRepository(Generic[TenantModelType]):
 		self, tenant_id: UUID, obj_in: dict[str, Any] | Any
 	) -> TenantModelType:
 		"""Создать запись с принудительной установкой tenant_id"""
+		# ✅ Проверяем тип obj_in
 		if isinstance(obj_in, dict):
 			db_obj = self.model(**obj_in)
-		else:
+		elif isinstance(obj_in, self.model):
 			db_obj = obj_in
+		else:
+			raise TypeError(
+				f"obj_in must be dict or {self.model.__name__} instance, "
+				f"got {type(obj_in).__name__}"
+			)
 
 		if hasattr(db_obj, "tenant_id"):
 			db_obj.tenant_id = tenant_id

@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Dict, Sequence
 from uuid import UUID
 
 from sqlalchemy import and_
@@ -15,6 +15,16 @@ class PositionRepository(TenantAwareRepository[Position]):
 
 	def __init__(self, session: AsyncSession):
 		super().__init__(session, Position)
+
+	async def create(self, tenant_id: UUID, obj_in: Dict[str, Any]) -> Position:
+		"""Создать новую позицию"""
+		# Добавляем tenant_id в данные
+		obj_in["tenant_id"] = tenant_id
+		position = Position(**obj_in)
+		self.session.add(position)
+		await self.session.commit()
+		await self.session.refresh(position)
+		return position
 
 	async def get_all_by_user(
 		self, tenant_id: UUID, user_id: UUID, closed: bool | None = None

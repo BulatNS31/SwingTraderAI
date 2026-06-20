@@ -68,9 +68,9 @@ async def test_get_by_id_not_found(ticker_service: TickerService):
 
 
 async def test_search_success(ticker_service: TickerService, sample_ticker: Ticker):
-	results = await ticker_service.search(q="AAP", limit=5)
+	results = await ticker_service.search(q="GOOG", limit=5)
 	assert len(results) >= 1
-	assert any(t.symbol == "AAPL" for t in results)
+	assert any(t.symbol == "GOOGL" for t in results)
 
 
 async def test_search_too_short_query(ticker_service: TickerService):

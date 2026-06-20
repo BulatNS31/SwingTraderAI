@@ -6,8 +6,10 @@ export function useAnalyticsSummary() {
   return useQuery({
     queryKey: queryKeys.analytics.summary,
     queryFn: mockApi.analytics.getSummary,
-    staleTime: 4 * 60 * 1000,
+    staleTime: 30 * 1000,
     retry: 1,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
   })
 }
 
@@ -15,8 +17,10 @@ export function useAnalyticsSnapshot() {
   return useQuery({
     queryKey: queryKeys.analytics.snapshot,
     queryFn: mockApi.analytics.getSnapshot,
-    staleTime: 4 * 60 * 1000,
+    staleTime: 30 * 1000,
     retry: 1,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
   })
 }
 
@@ -24,7 +28,9 @@ export function useAnalyticsPulse() {
   return useQuery({
     queryKey: queryKeys.analytics.pulse,
     queryFn: mockApi.analytics.getPulse,
-    staleTime: 4 * 60 * 1000,
+    staleTime: 30 * 1000,
     retry: 1,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
   })
 }

@@ -8,8 +8,10 @@ export function useWatchlist() {
   return useQuery<WatchlistItem[]>({
     queryKey: queryKeys.watchlist.list,
     queryFn: mockApi.watchlist.getAll,
-    staleTime: 3 * 60 * 1000,
+    staleTime: 10 * 1000,
     retry: 2,
+    refetchInterval: 1000, // Watchlist quotes
+    refetchIntervalInBackground: false,
   })
 }
 

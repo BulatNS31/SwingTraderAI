@@ -25,6 +25,17 @@ class MarketDataBase(BaseModel):
 	volume: Optional[Decimal] = None
 
 
+class MarketQuoteSchema(BaseModel):
+	symbol: str
+	price: Decimal
+	change_percent: float
+	volume: Optional[float] = None
+	market_type: str
+	updated_at: datetime
+
+	model_config = ConfigDict(from_attributes=True)
+
+
 class MarketDataOut(MarketDataBase):
 	id: UUID
 	ticker_id: UUID

@@ -8,8 +8,10 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
-from swingtraderai.api.v1 import auth, indicators, tickers, users, watchlist
+from swingtraderai.api.v1 import auth, indicators, markets, tickers, users, watchlist
 from swingtraderai.api.v1.admin import router as admin_router
+from swingtraderai.api.v1.routers.markets import router as markets_router_v2
+from swingtraderai.api.v1.routers.portfolios import router as portfolios_router
 from swingtraderai.core.config import settings
 from swingtraderai.core.rate_limit import _rate_limit_exceeded_handler, limiter
 from swingtraderai.db.base import Base
@@ -72,5 +74,8 @@ app.include_router(users.router, prefix="/api/v1")
 app.include_router(tickers.router, prefix="/api/v1")
 app.include_router(watchlist.router, prefix="/api/v1")
 app.include_router(indicators.router, prefix="/api/v1")
+app.include_router(markets.router, prefix="/api/v1")
+app.include_router(markets_router_v2, prefix="/api/v1")
+app.include_router(portfolios_router, prefix="/api/v1")
 
 app.include_router(admin_router, prefix="/api/v1")

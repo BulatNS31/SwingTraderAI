@@ -17,8 +17,10 @@ export function usePortfolioSummary() {
   return useQuery<PortfolioSummary>({
     queryKey: queryKeys.portfolio.summary,
     queryFn: mockApi.portfolio.getSummary,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 1000,
     retry: 2,
+    refetchInterval: 5000, // Portfolio summary
+    refetchIntervalInBackground: false,
   })
 }
 

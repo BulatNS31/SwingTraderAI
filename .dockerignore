@@ -33,6 +33,8 @@ docker-compose.override.yml
 
 LICENSE
 README.md
+AGENT.md
+CHANGELOG.md
 
 # Alembic кэш
 alembic/__pycache__/

@@ -35,7 +35,12 @@ export const queryKeys = {
     quickActions: ['dashboard', 'actions'] as const,
   },
   markets: {
-    list: ['markets'] as const,
+    overview: ['markets', 'overview'] as const,
+    crypto: ['markets', 'crypto'] as const,
+    moex: ['markets', 'moex'] as const,
+    nasdaq: ['markets', 'nasdaq'] as const,
+    heatmap: ['markets', 'heatmap'] as const,
+    pulse: ['markets', 'pulse'] as const,
   },
   analytics: {
     summary: ['analytics', 'summary'] as const,
