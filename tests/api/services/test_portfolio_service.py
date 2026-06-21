@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -327,3 +327,449 @@ async def test_multiple_tickers_same_type(portfolio_service, user, ticker_aapl):
 	assert result.assets[0].value == 1150.0
 	assert result.total_value == 1150.0
 	assert result.total_change_abs == 50.0
+
+
+class TestPortfolioServiceExtended:
+	"""Дополнительные тесты для PortfolioService"""
+
+	async def test_position_with_very_small_values(
+		self, portfolio_service, user, ticker_aapl, market_data
+	):
+		"""Тест с очень маленькими значениями (доли копеек)"""
+		quantity = Decimal("0.0001")
+		avg_price = Decimal("0.0001")
+		total_cost = quantity * avg_price
+
+		position = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="long",
+			quantity=quantity,
+			average_buy_price=avg_price,
+			total_cost=total_cost,
+			opened_at=datetime(2025, 5, 1),
+		)
+		session = portfolio_service.session
+		session.add(position)
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		assert result.total_value >= 0
+		assert isinstance(result.total_value, float)
+
+	async def test_position_with_closed_at_not_none(
+		self, portfolio_service, user, ticker_aapl, market_data
+	):
+		"""Закрытая позиция не должна учитываться"""
+		position = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="long",
+			quantity=Decimal("10"),
+			average_buy_price=Decimal("210.00"),
+			total_cost=Decimal("2100.00"),
+			opened_at=datetime(2025, 5, 1),
+			closed_at=datetime(2025, 5, 2),
+		)
+		session = portfolio_service.session
+		session.add(position)
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		assert result.total_value == 0.0
+		assert result.total_change_abs == 0.0
+		assert result.assets == []
+
+	async def test_mixed_long_and_short_same_ticker(
+		self, portfolio_service, user, ticker_aapl, market_data
+	):
+		"""Long и short позиции по одному тикеру"""
+		long_position = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="long",
+			quantity=Decimal("10"),
+			average_buy_price=Decimal("200.00"),
+			total_cost=Decimal("2000.00"),
+			opened_at=datetime(2025, 5, 1),
+		)
+
+		short_position = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="short",
+			quantity=Decimal("5"),
+			average_buy_price=Decimal("240.00"),
+			total_cost=Decimal("1200.00"),
+			opened_at=datetime(2025, 5, 1),
+		)
+
+		session = portfolio_service.session
+		session.add_all([long_position, short_position])
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		current_price = Decimal("225.50")
+
+		long_pnl = (current_price - Decimal("200.00")) * Decimal("10")
+		short_pnl = (Decimal("240.00") - current_price) * Decimal("5")
+		expected_value = (Decimal("10") + Decimal("5")) * current_price
+		expected_pnl = long_pnl + short_pnl
+
+		assert result.total_value == pytest.approx(float(expected_value))
+		assert result.total_change_abs == pytest.approx(float(expected_pnl))
+		assert len(result.assets) == 1
+		assert result.assets[0].asset_type == "stock"
+
+	async def test_position_with_no_market_data_for_one_ticker(
+		self, portfolio_service, user, ticker_aapl, ticker_btc
+	):
+		"""Один тикер с MarketData, другой без"""
+		market_data_aapl = MarketData(
+			ticker_id=ticker_aapl.id,
+			close=Decimal("225.50"),
+			timestamp=datetime(2025, 5, 5, 10, 0, 0),
+		)
+		session = portfolio_service.session
+		session.add(market_data_aapl)
+
+		position1 = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="long",
+			quantity=Decimal("10"),
+			average_buy_price=Decimal("200.00"),
+			total_cost=Decimal("2000.00"),
+			opened_at=datetime(2025, 5, 1),
+		)
+
+		position2 = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_btc.id,
+			position_type="long",
+			quantity=Decimal("1"),
+			average_buy_price=Decimal("60000.00"),
+			total_cost=Decimal("60000.00"),
+			opened_at=datetime(2025, 5, 1),
+		)
+
+		session.add_all([position1, position2])
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		assert result.total_value == pytest.approx(2255.0)
+		assert len(result.assets) == 1
+		assert result.assets[0].asset_type == "stock"
+
+	async def test_position_with_decimal_precision(
+		self, portfolio_service, user, ticker_aapl, market_data
+	):
+		"""Проверка точности Decimal вычислений"""
+		quantity = Decimal("0.123456789")
+		avg_price = Decimal("123.456789")
+		total_cost = quantity * avg_price
+
+		position = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="long",
+			quantity=quantity,
+			average_buy_price=avg_price,
+			total_cost=total_cost,
+			opened_at=datetime(2025, 5, 1),
+		)
+		session = portfolio_service.session
+		session.add(position)
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		current_price = Decimal("225.50")
+		expected_value = quantity * current_price
+
+		assert result.total_value == pytest.approx(float(expected_value))
+
+	async def test_asset_distribution_percentages(
+		self, portfolio_service, user, ticker_aapl, ticker_btc, market_data
+	):
+		"""Проверка корректного расчета процентов распределения активов"""
+		position1 = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="long",
+			quantity=Decimal("10"),
+			average_buy_price=Decimal("200.00"),
+			total_cost=Decimal("2000.00"),
+			opened_at=datetime(2025, 5, 1),
+		)
+
+		position2 = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_btc.id,
+			position_type="long",
+			quantity=Decimal("0.5"),
+			average_buy_price=Decimal("60000.00"),
+			total_cost=Decimal("30000.00"),
+			opened_at=datetime(2025, 5, 1),
+		)
+
+		session = portfolio_service.session
+		session.add_all([position1, position2])
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		total = 2255 + 31750
+
+		assert len(result.assets) == 2
+
+		stock_asset = next(a for a in result.assets if a.asset_type == "stock")
+		crypto_asset = next(a for a in result.assets if a.asset_type == "crypto")
+
+		assert stock_asset.percent == pytest.approx(2255 / total * 100)
+		assert crypto_asset.percent == pytest.approx(31750 / total * 100)
+
+		assert stock_asset.percent + crypto_asset.percent == pytest.approx(100.0)
+
+	async def test_multiple_positions_same_ticker(
+		self, portfolio_service, user, ticker_aapl, market_data
+	):
+		"""Несколько позиций по одному тикеру"""
+		positions = [
+			Position(
+				tenant_id=user.tenant_id,
+				user_id=user.id,
+				ticker_id=ticker_aapl.id,
+				position_type="long",
+				quantity=Decimal("10"),
+				average_buy_price=Decimal("200.00"),
+				total_cost=Decimal("2000.00"),
+				opened_at=datetime(2025, 5, 1),
+			),
+			Position(
+				tenant_id=user.tenant_id,
+				user_id=user.id,
+				ticker_id=ticker_aapl.id,
+				position_type="short",
+				quantity=Decimal("5"),
+				average_buy_price=Decimal("210.00"),
+				total_cost=Decimal("1050.00"),
+				opened_at=datetime(2025, 5, 2),
+			),
+		]
+
+		session = portfolio_service.session
+		session.add_all(positions)
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		expected_value = Decimal("15") * Decimal("225.50")
+
+		assert result.total_value == pytest.approx(float(expected_value))
+		assert len(result.assets) == 1
+		assert result.assets[0].value == pytest.approx(float(expected_value))
+
+	async def test_position_with_zero_average_price(
+		self, portfolio_service, user, ticker_aapl, market_data
+	):
+		"""Позиция с нулевой средней ценой"""
+		position = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="long",
+			quantity=Decimal("10"),
+			average_buy_price=Decimal("0"),
+			total_cost=Decimal("0"),
+			opened_at=datetime(2025, 5, 1),
+		)
+		session = portfolio_service.session
+		session.add(position)
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		expected_value = Decimal("10") * Decimal("225.50")
+		expected_pnl = expected_value
+
+		assert result.total_value == pytest.approx(float(expected_value))
+		assert result.total_change_abs == pytest.approx(float(expected_pnl))
+
+	async def test_very_large_position_values(
+		self, portfolio_service, user, ticker_aapl, market_data
+	):
+		"""Тест с очень большими значениями"""
+		quantity = Decimal("1000000")
+		avg_price = Decimal("100.00")
+		total_cost = quantity * avg_price
+
+		position = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="long",
+			quantity=quantity,
+			average_buy_price=avg_price,
+			total_cost=total_cost,
+			opened_at=datetime(2025, 5, 1),
+		)
+		session = portfolio_service.session
+		session.add(position)
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		expected_value = quantity * Decimal("225.50")
+		assert result.total_value == pytest.approx(float(expected_value))
+		assert result.total_change_abs > 0
+
+	async def test_multiple_market_data_entries(
+		self, portfolio_service, user, ticker_aapl
+	):
+		"""Несколько записей MarketData - должна использоваться последняя"""
+		session = portfolio_service.session
+
+		for i, price in enumerate([200.0, 210.0, 225.5]):
+			md = MarketData(
+				ticker_id=ticker_aapl.id,
+				close=Decimal(str(price)),
+				timestamp=datetime(2025, 5, 5, 10, i, 0),
+			)
+			session.add(md)
+
+		position = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="long",
+			quantity=Decimal("10"),
+			average_buy_price=Decimal("200.00"),
+			total_cost=Decimal("2000.00"),
+			opened_at=datetime(2025, 5, 1),
+		)
+		session.add(position)
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		expected_value = Decimal("10") * Decimal("225.5")
+		assert result.total_value == pytest.approx(float(expected_value))
+
+	async def test_position_with_very_small_change_percent(
+		self, portfolio_service, user, ticker_aapl
+	):
+		"""Позиция с очень маленьким изменением"""
+		session = portfolio_service.session
+
+		md = MarketData(
+			ticker_id=ticker_aapl.id,
+			close=Decimal("200.0001"),
+			timestamp=datetime(2025, 5, 5, 10, 0, 0),
+		)
+		session.add(md)
+
+		position = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="long",
+			quantity=Decimal("10000"),
+			average_buy_price=Decimal("200.00"),
+			total_cost=Decimal("2000000.00"),
+			opened_at=datetime(2025, 5, 1),
+		)
+		session.add(position)
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		expected_value = Decimal("10000") * Decimal("200.0001")
+		expected_pnl = expected_value - Decimal("2000000.00")
+
+		assert result.total_value == pytest.approx(float(expected_value))
+		assert result.total_change_abs == pytest.approx(float(expected_pnl))
+		assert abs(result.total_change_percent) < 0.01
+
+	async def test_asset_type_with_unknown_type(
+		self, portfolio_service, user, ticker_aapl, market_data
+	):
+		"""Тест с неизвестным типом актива"""
+		unknown_ticker = Ticker(
+			symbol="UNKNOWN",
+			asset_type="unknown",
+			exchange_id=None,
+			base_currency="USD",
+			quote_currency="USD",
+			is_active=True,
+		)
+		session = portfolio_service.session
+		session.add(unknown_ticker)
+		await session.flush()
+		await session.refresh(unknown_ticker)
+
+		md = MarketData(
+			ticker_id=unknown_ticker.id,
+			close=Decimal("100.00"),
+			timestamp=datetime(2025, 5, 5, 10, 0, 0),
+		)
+		session.add(md)
+
+		position = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=unknown_ticker.id,
+			position_type="long",
+			quantity=Decimal("10"),
+			average_buy_price=Decimal("90.00"),
+			total_cost=Decimal("900.00"),
+			opened_at=datetime(2025, 5, 1),
+		)
+		session.add(position)
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		assert len(result.assets) == 1
+		assert result.assets[0].asset_type == "unknown"
+		assert result.assets[0].value == pytest.approx(1000.0)
+		assert result.total_value == pytest.approx(1000.0)
+
+	async def test_position_with_future_dates(
+		self, portfolio_service, user, ticker_aapl
+	):
+		"""Позиция с будущей датой открытия"""
+		future_date = datetime.now() + timedelta(days=30)
+
+		position = Position(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			ticker_id=ticker_aapl.id,
+			position_type="long",
+			quantity=Decimal("10"),
+			average_buy_price=Decimal("200.00"),
+			total_cost=Decimal("2000.00"),
+			opened_at=future_date,
+		)
+		session = portfolio_service.session
+		session.add(position)
+		await session.commit()
+
+		result = await portfolio_service.get_portfolio_summary(user.tenant_id, user.id)
+
+		assert result.total_value == 0.0
+		assert result.total_change_abs == 0.0
+		assert result.assets == []

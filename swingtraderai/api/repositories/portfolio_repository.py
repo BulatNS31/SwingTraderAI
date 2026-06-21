@@ -27,7 +27,7 @@ class PortfolioRepository(TenantAwareRepository[Portfolio]):
 			)
 		)
 		result = await self.session.execute(query)
-		return result.scalars().all()
+		return result.unique().scalars().all()
 
 	async def get_by_id(
 		self, tenant_id: UUID, portfolio_id: UUID
@@ -40,7 +40,7 @@ class PortfolioRepository(TenantAwareRepository[Portfolio]):
 			)
 		)
 		result = await self.session.execute(query)
-		return result.scalar_one_or_none()
+		return result.unique().scalar_one_or_none()
 
 	async def create_for_user(
 		self, tenant_id: UUID, user_id: UUID, obj_in: dict[str, Any]

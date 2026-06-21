@@ -1,5 +1,6 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -11,8 +12,10 @@ from swingtraderai.db.models.system import Watchlist, WatchlistItem
 from swingtraderai.schemas.watchlist import (
 	SignalType,
 	WatchlistCreate,
+	WatchlistDataItem,
 	WatchlistItemCreate,
 	WatchlistItemUpdate,
+	WatchlistStats,
 )
 
 
@@ -647,3 +650,472 @@ class TestWatchlistServiceSearchAndFilter:
 		assert len(items) >= 1
 		assert items[0].ai_insight is not None
 		assert items[0].trend is not None
+
+
+class TestWatchlistServiceStats:
+	"""Тесты для статистики watchlist"""
+
+	async def test_get_watchlist_stats_empty(self, watchlist_service, user):
+		"""Тест: получение статистики для пустого watchlist"""
+		with patch.object(
+			watchlist_service,
+			"get_watchlist_with_prices",
+			new=AsyncMock(return_value=[]),
+		):
+			stats = await watchlist_service.get_watchlist_stats(
+				tenant_id=user.tenant_id, user_id=user.id
+			)
+
+		assert stats == WatchlistStats()
+		assert stats.total_assets == 0
+		assert stats.gainers == 0
+		assert stats.losers == 0
+		assert stats.neutral == 0
+		assert stats.avg_change_percent == 0.0
+		assert stats.top_gainer is None
+		assert stats.top_loser is None
+
+	async def test_get_watchlist_stats_with_gainers_and_losers(
+		self, watchlist_service, user
+	):
+		"""Тест: статистика с гейнерами и лузерами"""
+		# Создаем тестовые данные
+		items = [
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="AAPL",
+				asset_type="stock",
+				last_price=150.0,
+				change_percent=5.0,
+				change_abs=7.5,
+				added_at=datetime.now(),
+				signal="STRONG_BUY",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="GOOGL",
+				asset_type="stock",
+				last_price=100.0,
+				change_percent=-3.0,
+				change_abs=-3.0,
+				added_at=datetime.now(),
+				signal="SELL",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="MSFT",
+				asset_type="stock",
+				last_price=200.0,
+				change_percent=0.0,
+				change_abs=0.0,
+				added_at=datetime.now(),
+				signal="NEUTRAL",
+			),
+		]
+
+		with patch.object(
+			watchlist_service,
+			"get_watchlist_with_prices",
+			new=AsyncMock(return_value=items),
+		):
+			stats = await watchlist_service.get_watchlist_stats(
+				tenant_id=user.tenant_id, user_id=user.id
+			)
+
+		assert stats.total_assets == 3
+		assert stats.gainers == 1
+		assert stats.losers == 1
+		assert stats.neutral == 1
+		assert stats.strong_buy_count == 1
+		assert stats.buy_count == 0
+		assert stats.sell_count == 1
+		assert stats.strong_sell_count == 0
+		assert stats.avg_change_percent == round((5.0 + (-3.0) + 0.0) / 3, 2)
+		assert stats.top_gainer == "AAPL"
+		assert stats.top_loser == "GOOGL"
+
+	async def test_get_watchlist_stats_all_signals(self, watchlist_service, user):
+		"""Тест: статистика со всеми типами сигналов"""
+		items = [
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="AAPL",
+				asset_type="stock",
+				last_price=150.0,
+				change_percent=5.0,
+				added_at=datetime.now(),
+				signal="STRONG_BUY",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="MSFT",
+				asset_type="stock",
+				last_price=200.0,
+				change_percent=2.0,
+				added_at=datetime.now(),
+				signal="BUY",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="GOOGL",
+				asset_type="stock",
+				last_price=100.0,
+				change_percent=-2.0,
+				added_at=datetime.now(),
+				signal="SELL",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="AMZN",
+				asset_type="stock",
+				last_price=50.0,
+				change_percent=-5.0,
+				added_at=datetime.now(),
+				signal="STRONG_SELL",
+			),
+		]
+
+		with patch.object(
+			watchlist_service,
+			"get_watchlist_with_prices",
+			new=AsyncMock(return_value=items),
+		):
+			stats = await watchlist_service.get_watchlist_stats(
+				tenant_id=user.tenant_id, user_id=user.id
+			)
+
+		assert stats.total_assets == 4
+		assert stats.gainers == 2
+		assert stats.losers == 2
+		assert stats.neutral == 0
+		assert stats.strong_buy_count == 1
+		assert stats.buy_count == 1
+		assert stats.sell_count == 1
+		assert stats.strong_sell_count == 1
+		assert stats.top_gainer == "AAPL"
+		assert stats.top_loser == "AMZN"
+
+	async def test_get_watchlist_stats_with_none_change_percent(
+		self, watchlist_service, user
+	):
+		"""Тест: статистика с None в change_percent"""
+		items = [
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="AAPL",
+				asset_type="stock",
+				last_price=150.0,
+				change_percent=None,
+				added_at=datetime.now(),
+				signal="NEUTRAL",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="GOOGL",
+				asset_type="stock",
+				last_price=100.0,
+				change_percent=5.0,
+				added_at=datetime.now(),
+				signal="STRONG_BUY",
+			),
+		]
+
+		with patch.object(
+			watchlist_service,
+			"get_watchlist_with_prices",
+			new=AsyncMock(return_value=items),
+		):
+			stats = await watchlist_service.get_watchlist_stats(
+				tenant_id=user.tenant_id, user_id=user.id
+			)
+
+		assert stats.total_assets == 2
+		assert stats.gainers == 1
+		assert stats.losers == 0
+		assert stats.neutral == 1
+		assert stats.avg_change_percent == round((0.0 + 5.0) / 2, 2)
+		assert stats.top_gainer == "GOOGL"
+		assert stats.top_loser is None
+
+	async def test_get_watchlist_stats_only_gainers(self, watchlist_service, user):
+		"""Тест: статистика только с гейнерами"""
+		items = [
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="AAPL",
+				asset_type="stock",
+				last_price=150.0,
+				change_percent=10.0,
+				added_at=datetime.now(),
+				signal="STRONG_BUY",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="MSFT",
+				asset_type="stock",
+				last_price=200.0,
+				change_percent=5.0,
+				added_at=datetime.now(),
+				signal="BUY",
+			),
+		]
+
+		with patch.object(
+			watchlist_service,
+			"get_watchlist_with_prices",
+			new=AsyncMock(return_value=items),
+		):
+			stats = await watchlist_service.get_watchlist_stats(
+				tenant_id=user.tenant_id, user_id=user.id
+			)
+
+		assert stats.total_assets == 2
+		assert stats.gainers == 2
+		assert stats.losers == 0
+		assert stats.neutral == 0
+		assert stats.avg_change_percent == 7.5
+		assert stats.top_gainer == "AAPL"
+		assert stats.top_loser is None
+
+	async def test_get_watchlist_stats_only_losers(self, watchlist_service, user):
+		"""Тест: статистика только с лузерами"""
+		items = [
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="AAPL",
+				asset_type="stock",
+				last_price=150.0,
+				change_percent=-10.0,
+				added_at=datetime.now(),
+				signal="STRONG_SELL",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="MSFT",
+				asset_type="stock",
+				last_price=200.0,
+				change_percent=-5.0,
+				added_at=datetime.now(),
+				signal="SELL",
+			),
+		]
+
+		with patch.object(
+			watchlist_service,
+			"get_watchlist_with_prices",
+			new=AsyncMock(return_value=items),
+		):
+			stats = await watchlist_service.get_watchlist_stats(
+				tenant_id=user.tenant_id, user_id=user.id
+			)
+
+		assert stats.total_assets == 2
+		assert stats.gainers == 0
+		assert stats.losers == 2
+		assert stats.neutral == 0
+		assert stats.avg_change_percent == -7.5
+		assert stats.top_gainer is None
+		assert stats.top_loser == "AAPL"
+
+	async def test_get_watchlist_stats_with_same_change_values(
+		self, watchlist_service, user
+	):
+		"""Тест: статистика с одинаковыми значениями change_percent"""
+		items = [
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="AAPL",
+				asset_type="stock",
+				last_price=150.0,
+				change_percent=5.0,
+				added_at=datetime.now(),
+				signal="BUY",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="GOOGL",
+				asset_type="stock",
+				last_price=100.0,
+				change_percent=5.0,
+				added_at=datetime.now(),
+				signal="STRONG_BUY",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="MSFT",
+				asset_type="stock",
+				last_price=200.0,
+				change_percent=-3.0,
+				added_at=datetime.now(),
+				signal="SELL",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="AMZN",
+				asset_type="stock",
+				last_price=50.0,
+				change_percent=-3.0,
+				added_at=datetime.now(),
+				signal="STRONG_SELL",
+			),
+		]
+
+		with patch.object(
+			watchlist_service,
+			"get_watchlist_with_prices",
+			new=AsyncMock(return_value=items),
+		):
+			stats = await watchlist_service.get_watchlist_stats(
+				tenant_id=user.tenant_id, user_id=user.id
+			)
+
+		assert stats.total_assets == 4
+		assert stats.gainers == 2
+		assert stats.losers == 2
+		assert stats.neutral == 0
+		assert stats.strong_buy_count == 1
+		assert stats.buy_count == 1
+		assert stats.sell_count == 1
+		assert stats.strong_sell_count == 1
+		assert stats.top_gainer == "AAPL"
+		assert stats.top_loser == "MSFT"
+
+	async def test_get_watchlist_stats_calls_get_watchlist_with_prices_correctly(
+		self, watchlist_service, user
+	):
+		"""Тест: проверка, что get_watchlist_stats вызывает
+		get_watchlist_with_prices с правильными параметрами"""
+		mock_get_items = AsyncMock(return_value=[])
+
+		with patch.object(
+			watchlist_service, "get_watchlist_with_prices", new=mock_get_items
+		):
+			await watchlist_service.get_watchlist_stats(
+				tenant_id=user.tenant_id, user_id=user.id
+			)
+
+		mock_get_items.assert_called_once_with(
+			tenant_id=user.tenant_id,
+			user_id=user.id,
+			limit=200,
+			include_ai=True,
+		)
+
+	async def test_get_watchlist_stats_no_signal(self, watchlist_service, user):
+		"""Тест: статистика с элементами без сигналов"""
+		items = [
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="AAPL",
+				asset_type="stock",
+				last_price=150.0,
+				change_percent=5.0,
+				added_at=datetime.now(),
+				signal=None,  # Без сигнала
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="GOOGL",
+				asset_type="stock",
+				last_price=100.0,
+				change_percent=-3.0,
+				added_at=datetime.now(),
+				signal=None,
+			),
+		]
+
+		with patch.object(
+			watchlist_service,
+			"get_watchlist_with_prices",
+			new=AsyncMock(return_value=items),
+		):
+			stats = await watchlist_service.get_watchlist_stats(
+				tenant_id=user.tenant_id, user_id=user.id
+			)
+
+		assert stats.total_assets == 2
+		assert stats.gainers == 1
+		assert stats.losers == 1
+		assert stats.neutral == 0
+		assert stats.strong_buy_count == 0
+		assert stats.buy_count == 0
+		assert stats.sell_count == 0
+		assert stats.strong_sell_count == 0
+		assert stats.top_gainer == "AAPL"
+		assert stats.top_loser == "GOOGL"
+
+	async def test_get_watchlist_stats_mixed_signals_and_no_signals(
+		self, watchlist_service, user
+	):
+		"""Тест: статистика со смешанными сигналами"""
+		items = [
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="AAPL",
+				asset_type="stock",
+				last_price=150.0,
+				change_percent=5.0,
+				added_at=datetime.now(),
+				signal="STRONG_BUY",
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="GOOGL",
+				asset_type="stock",
+				last_price=100.0,
+				change_percent=-3.0,
+				added_at=datetime.now(),
+				signal=None,
+			),
+			WatchlistDataItem(
+				item_id=uuid7(),
+				ticker_id=uuid7(),
+				symbol="MSFT",
+				asset_type="stock",
+				last_price=200.0,
+				change_percent=0.0,
+				added_at=datetime.now(),
+				signal="NEUTRAL",
+			),
+		]
+
+		with patch.object(
+			watchlist_service,
+			"get_watchlist_with_prices",
+			new=AsyncMock(return_value=items),
+		):
+			stats = await watchlist_service.get_watchlist_stats(
+				tenant_id=user.tenant_id, user_id=user.id
+			)
+
+		assert stats.total_assets == 3
+		assert stats.gainers == 1
+		assert stats.losers == 1
+		assert stats.neutral == 1
+		assert stats.strong_buy_count == 1
+		assert stats.buy_count == 0
+		assert stats.sell_count == 0
+		assert stats.strong_sell_count == 0
+		assert stats.top_gainer == "AAPL"
+		assert stats.top_loser == "GOOGL"

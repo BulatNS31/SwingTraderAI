@@ -446,22 +446,18 @@ class WatchlistService:
 			change = item.change_percent or 0.0
 			total_change += change
 
-			# movement
 			if change > 0:
 				gainers += 1
+				if change > best_change:
+					best_change = change
+					top_gainer = item.symbol
 			elif change < 0:
 				losers += 1
+				if change < worst_change:
+					worst_change = change
+					top_loser = item.symbol
 			else:
 				neutral += 1
-
-			# top movers
-			if change > best_change:
-				best_change = change
-				top_gainer = item.symbol
-
-			if change < worst_change:
-				worst_change = change
-				top_loser = item.symbol
 
 			# signals
 			match item.signal:
