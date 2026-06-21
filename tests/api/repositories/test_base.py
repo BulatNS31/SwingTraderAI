@@ -581,7 +581,10 @@ class TestTenantAwareRepository:
 
 		# Проверяем сообщение ошибки
 		error_message = str(exc_info.value)
-		assert "must have an 'id' column" in error_message
+		assert (
+			"Model TestModelWithoutId must have an 'id' or 'ticker_id' column"
+			in error_message
+		)
 		assert "TestModelWithoutId" in error_message
 
 

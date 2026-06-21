@@ -91,11 +91,14 @@ class TenantAwareRepository(Generic[TenantModelType]):
 		return select(self.model).where(self.model.tenant_id == tenant_id)
 
 	async def get_by_id(self, tenant_id: UUID, id: UUID) -> Optional[TenantModelType]:
-		id_column = getattr(self.model, "ticker_id", None)
+		id_column = getattr(self.model, "id", None)
 		if id_column is None:
-			raise AttributeError(
-				f"Model {self.model.__name__} must have an 'id' column"
-			)
+			id_column = getattr(self.model, "ticker_id", None)
+			if id_column is None:
+				raise AttributeError(
+					f"Model {self.model.__name__} must have "
+					"an 'id' or 'ticker_id' column"
+				)
 		query = self._get_tenant_query(tenant_id).where(id_column == id)
 		result = await self.session.execute(query)
 		return result.scalar_one_or_none()

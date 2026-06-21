@@ -280,6 +280,7 @@ class WatchlistService:
 				trend_subq.c.ticker_id == Ticker.id,
 			)
 			.where(
+				WatchlistItem.tenant_id == tenant_id,
 				Watchlist.owner_id == user_id,
 				Watchlist.tenant_id == tenant_id,
 			)

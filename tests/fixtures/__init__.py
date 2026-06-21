@@ -7,6 +7,7 @@ from .market import (
 	ticker,
 	ticker_service,
 	watchlist,
+	watchlist_service,
 )
 from .market_quotes import market_quote, market_quote_factory
 from .redis import (
@@ -16,7 +17,7 @@ from .redis import (
 	mock_request,
 	mock_request_with_user,
 )
-from .users import user
+from .users import other_user, user
 
 __all__ = [
 	"session",
@@ -28,8 +29,10 @@ __all__ = [
 	"ticker",
 	"ticker_service",
 	"watchlist",
+	"watchlist_service",
 	"sample_market_data",
 	"user",
+	"other_user",
 	"registrations",
 	"activity_df",
 	"registration_dict",

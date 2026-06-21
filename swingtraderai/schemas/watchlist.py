@@ -28,19 +28,38 @@ class AnalysisConfig:
 	}
 
 	SCORES: Final = {
-		"strong_bullish": 2,
-		"bullish": 1,
-		"strong_bearish": -2,
-		"bearish": -1,
-		SignalType.TARGET_HIT: 2,
-		SignalType.STOP_LOSS_HIT: -2,
+		"strong_bullish": 20,
+		"bullish": 10,
+		"strong_bearish": -20,
+		"bearish": -10,
+		SignalType.TARGET_HIT: 15,
+		SignalType.STOP_LOSS_HIT: -15,
 	}
 
 	RESULT_MAPPING: Final = {
-		(3, float("inf")): ("STRONG_BUY", 0.91, "Strong bullish momentum detected"),
-		(1, 2): ("BUY", 0.77, "Positive momentum with upside potential"),
-		(float("-inf"), -3): ("STRONG_SELL", 0.89, "Strong downside pressure detected"),
-		(-2, -1): ("SELL", 0.74, "Negative momentum observed"),
+		(30, float("inf")): ("STRONG_BUY", 0.91, "Strong bullish momentum detected"),
+		(10, 29): ("BUY", 0.77, "Positive momentum with upside potential"),
+		(6, 9): (
+			"BUY",
+			0.70,
+			"Mild positive momentum",
+		),  # Добавлен диапазон для умеренного BUY
+		(-5, 5): (
+			"HOLD",
+			0.63,
+			"Price action remains neutral",
+		),  # HOLD для нейтральных значений
+		(-9, -6): (
+			"SELL",
+			0.70,
+			"Mild negative momentum",
+		),  # Добавлен диапазон для умеренного SELL
+		(-29, -10): ("SELL", 0.74, "Negative momentum observed"),
+		(float("-inf"), -30): (
+			"STRONG_SELL",
+			0.89,
+			"Strong downside pressure detected",
+		),
 	}
 
 	NEUTRAL: Final = ("NEUTRAL", 0.63, "Price action remains neutral")

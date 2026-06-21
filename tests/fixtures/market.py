@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
 
 from swingtraderai.api.services.ticker_service import TickerService
+from swingtraderai.api.services.watchlist_service import WatchlistService
 from swingtraderai.db.models.market import Exchange, MarketData, Ticker
 from swingtraderai.schemas.watchlist import WatchlistCreate
 
@@ -102,3 +103,8 @@ async def watchlist(watchlist_service, user):
 	return await watchlist_service.create_watchlist(
 		tenant_id=user.tenant_id, user_id=user.id, watchlist_in=watchlist_in
 	)
+
+
+@pytest_asyncio.fixture
+async def watchlist_service(session):
+	return WatchlistService(session)

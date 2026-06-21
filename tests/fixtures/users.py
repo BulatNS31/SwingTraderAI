@@ -18,3 +18,17 @@ async def user(session: AsyncSession):
 	await session.refresh(user)
 
 	yield user
+
+
+@pytest_asyncio.fixture
+async def other_user(session: AsyncSession) -> User:
+	"""Создает другого тестового пользователя и возвращает его"""
+	user = User(
+		username="other_user",
+		email="other@example.com",
+		password_hash="fakehash456",
+	)
+	session.add(user)
+	await session.commit()
+	await session.refresh(user)
+	return user

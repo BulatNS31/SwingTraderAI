@@ -36,6 +36,7 @@ class WatchlistRepository(TenantAwareRepository[Watchlist]):
 				tenant_id=tenant_id,
 				owner_id=user_id,
 				name=watchlist_name,
+				is_default=True,
 			)
 			self.session.add(watchlist)
 			await self.session.commit()
@@ -98,17 +99,13 @@ class WatchlistItemRepository(TenantAwareRepository[WatchlistItem]):
 		self, tenant_id: UUID, watchlist_id: UUID, ticker_id: UUID, **kwargs: Any
 	) -> WatchlistItem:
 		"""Создать новый элемент в watchlist"""
-		query = (
-			self._get_tenant_query(tenant_id)
-			.join(Watchlist)
-			.where(
-				and_(
-					WatchlistItem.watchlist_id == watchlist_id,
-					WatchlistItem.ticker_id == ticker_id,
-				)
+		stmt = select(WatchlistItem).where(
+			and_(
+				WatchlistItem.watchlist_id == watchlist_id,
+				WatchlistItem.ticker_id == ticker_id,
 			)
 		)
-		result = await self.session.execute(query)
+		result = await self.session.execute(stmt)
 		existing = result.scalar_one_or_none()
 
 		if existing:
@@ -130,7 +127,12 @@ class WatchlistItemRepository(TenantAwareRepository[WatchlistItem]):
 	) -> Watchlist:
 		"""Создать watchlist для пользователя, если его нет"""
 		result = await self.session.execute(
-			select(Watchlist).where(Watchlist.owner_id == user_id)
+			select(Watchlist).where(
+				and_(
+					Watchlist.tenant_id == tenant_id,
+					Watchlist.owner_id == user_id,
+				)
+			)
 		)
 		watchlist = result.scalar_one_or_none()
 
@@ -139,6 +141,7 @@ class WatchlistItemRepository(TenantAwareRepository[WatchlistItem]):
 				tenant_id=tenant_id,
 				owner_id=user_id,
 				name=name or f"Watchlist-{user_id}",
+				is_default=True,
 			)
 			self.session.add(watchlist)
 			await self.session.commit()
