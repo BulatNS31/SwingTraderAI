@@ -1,18 +1,15 @@
+import React from 'react';
 import { useParams } from 'react-router-dom'
-import { PageHeader } from '@/shared/ui/page-header'
+import TickerWorkspace from '../features/tickers/components/ticker-workspace';
 
-export function TickerPage() {
-  const { id } = useParams()
+export function TickerPage(): React.ReactNode {
+  const { symbol } = useParams<{ symbol: string }>()
+
+  if (!symbol) {
+    return <div>Тикер не найден</div>
+  }
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title={`Ticker: ${id?.toUpperCase()}`}
-        description="Подробный анализ и торговая информация"
-      />
-      <div className="text-center text-muted-foreground">
-        Подробная информация о тикерах и графики появятся в ближайшее время....
-      </div>
-    </div>
-  )
-}
+    <TickerWorkspace symbol={symbol} />
+  );
+};

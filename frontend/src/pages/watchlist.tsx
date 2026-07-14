@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 import { Input } from '@/shared/ui/input'
@@ -11,12 +12,17 @@ import { useWatchlist } from '@/features/watchlist/hooks/watchlist-hooks'
 const assetTypes = ['All', 'Crypto', 'Stocks', 'Russian'] as const
 
 export function WatchlistPage() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<(typeof assetTypes)[number]>('All')
   const [sortBy, setSortBy] = useState<'signal' | 'change' | 'name'>('signal')
 
   const watchlistQuery = useWatchlist()
   const items = watchlistQuery.data ?? []
+
+  const openTicker = (symbol: string) => {
+    navigate(`/ticker/${symbol}`)
+  }
 
   const getSignal = (symbol: string): 'BUY' | 'SELL' | 'NEUTRAL' => {
     if (symbol === 'TSLA') return 'SELL'
@@ -81,7 +87,7 @@ export function WatchlistPage() {
                 placeholder="Поиск символов или названий..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="border-0 bg-transparent p-0 text-slate-100 placeholder:text-slate-500 focus-visible:outline-none"
+                className="border-0 bg-transparent p-0 text-slate-100 placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 !ring-0 !ring-offset-0"
               />
             </div>
 
@@ -141,7 +147,7 @@ export function WatchlistPage() {
             const isPositive = item.ticker.change_percent >= 0
 
             return (
-              <GlassCard key={item.id} className="hover:border-slate-600 transition-all">
+              <GlassCard onClick={() => openTicker(item.ticker.symbol)} key={item.id} className="hover:border-slate-600 transition-all">
                 <div className="p-5 sm:p-6">
                   <div className="grid gap-5 sm:grid-cols-[1fr_auto_auto_auto] items-center">
                     {/* Ticker Info */}

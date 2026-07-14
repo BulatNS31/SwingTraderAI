@@ -54,7 +54,7 @@ export const router = createBrowserRouter([
       { path: 'admin/system-status', element: <AdminSystemStatusPage /> },
       { path: 'watchlist', element: <WatchlistPage /> },
       { path: 'portfolio', element: <PortfolioPage /> },
-      { path: 'ticker/:id', element: <TickerPage /> },
+      { path: 'ticker/:symbol', element: <TickerPage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],
   },

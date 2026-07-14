@@ -1,19 +1,36 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { createChart, type IChartApi, type ISeriesApi, type CandlestickData, CandlestickSeries, type UTCTimestamp } from 'lightweight-charts'
-import { type Candle } from '@/shared/api/api-client-types'
+import {
+  createChart,
+  CandlestickSeries,
+  type CandlestickData,
+  type IChartApi,
+  type ISeriesApi,
+  type UTCTimestamp,
+} from 'lightweight-charts'
+import { useTheme } from 'next-themes'
+
+import { Button } from '@/shared/ui/button'
+import type { Candle } from '@/shared/api/api-client-types'
+import { mockLevels } from '@/shared/mock/candels.mock'
 
 interface TickerChartProps {
   candles: Candle[]
-  onSelectTimeframe: (timeframe: string) => void
-  selectedTimeframe: string
+  selectedTimeframe: 'D1' | 'H4' | 'H1'
+  onSelectTimeframe: (timeframe: 'D1' | 'H4' | 'H1') => void
 }
 
-const timeframeOptions = ['1D', '1W', '1M', '3M'] as const
+const timeframeOptions = ['D1', 'H4', 'H1'] as const
 
-export function TickerChart({ candles, onSelectTimeframe, selectedTimeframe }: TickerChartProps) {
-  const chartRef = useRef<HTMLDivElement | null>(null)
-  const chartInstance = useRef<IChartApi | null>(null)
-  const candleSeries = useRef<ISeriesApi<'Candlestick'> | null>(null)
+export default function TickerChart({
+  candles,
+  selectedTimeframe,
+  onSelectTimeframe,
+}: TickerChartProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const chartRef = useRef<IChartApi | null>(null)
+
+  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
 
   const seriesData = useMemo<CandlestickData[]>(() => {
     return candles.map((candle) => ({
@@ -25,79 +42,176 @@ export function TickerChart({ candles, onSelectTimeframe, selectedTimeframe }: T
     }))
   }, [candles])
 
-  useEffect(() => {
-    if (!chartRef.current) return
+  const { resolvedTheme } = useTheme()
 
-    chartInstance.current = createChart(chartRef.current, {
+  const isDark = resolvedTheme === 'dark'
+
+  const chartColors = {
+    background: 'transparent',
+    text: isDark ? '#f8fafc' : '#0f172a',
+    grid: isDark
+      ? 'rgba(148,163,184,.08)'
+      : 'rgba(100,116,139,.15)',
+    border: isDark
+      ? 'rgba(148,163,184,.15)'
+      : 'rgba(100,116,139,.25)',
+  }
+
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const chart = createChart(containerRef.current, {
+      width: containerRef.current.clientWidth,
+      height: containerRef.current.clientHeight,
+
       layout: {
-        background: { color: 'transparent' },
+        background: {
+          color: 'transparent',
+        },
         textColor: 'var(--foreground)',
       },
+
       grid: {
-        vertLines: { color: 'rgba(148, 163, 184, 0.08)' },
-        horzLines: { color: 'rgba(148, 163, 184, 0.08)' },
+        vertLines: {
+          color: 'rgba(148,163,184,.08)',
+        },
+        horzLines: {
+          color: 'rgba(148,163,184,.08)',
+        },
       },
+
       rightPriceScale: {
-        borderColor: 'rgba(148, 163, 184, 0.2)',
+        borderColor: 'rgba(148,163,184,.15)',
       },
+
       timeScale: {
-        borderColor: 'rgba(148, 163, 184, 0.2)',
+        borderColor: 'rgba(148,163,184,.15)',
+        timeVisible: true,
+        secondsVisible: false,
       },
+
       crosshair: {
         mode: 1,
       },
+
       localization: {
-        dateFormat: 'MMM dd',
+        locale: 'en-US',
       },
     })
 
-    candleSeries.current = chartInstance.current.addSeries(CandlestickSeries, {
-      upColor: 'hsl(142, 76%, 36%)',
-      downColor: 'hsl(0, 84%, 60%)',
-      borderDownColor: 'hsl(0, 84%, 60%)',
-      borderUpColor: 'hsl(142, 76%, 36%)',
-      wickDownColor: 'hsl(0, 84%, 60%)',
-      wickUpColor: 'hsl(142, 76%, 36%)',
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#22c55e',
+      downColor: '#ef4444',
+
+      borderUpColor: '#22c55e',
+      borderDownColor: '#ef4444',
+
+      wickUpColor: '#22c55e',
+      wickDownColor: '#ef4444',
     })
 
+    chartRef.current = chart
+    candleSeriesRef.current = candleSeries
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (!containerRef.current || !chartRef.current) return
+
+      chartRef.current.applyOptions({
+        width: containerRef.current.clientWidth,
+        height: containerRef.current.clientHeight,
+      })
+    })
+
+    resizeObserver.observe(containerRef.current)
+
     return () => {
-      chartInstance.current?.remove()
-      chartInstance.current = null
-      candleSeries.current = null
+      resizeObserver.disconnect()
+      chart.remove()
+      chartRef.current = null
+      candleSeriesRef.current = null
     }
   }, [])
 
   useEffect(() => {
-    if (!candleSeries.current) return
-    candleSeries.current.setData(seriesData)
-    chartInstance.current?.timeScale().fitContent()
+    if (!chartRef.current) return
+
+    chartRef.current.applyOptions({
+      layout: {
+        textColor: chartColors.text,
+      },
+      grid: {
+        vertLines: {
+          color: chartColors.grid,
+        },
+        horzLines: {
+          color: chartColors.grid,
+        },
+      },
+      rightPriceScale: {
+        borderColor: chartColors.border,
+      },
+      timeScale: {
+        borderColor: chartColors.border,
+      },
+    })
+  }, [resolvedTheme])
+
+  useEffect(() => {
+    if (!candleSeriesRef.current) return
+
+    candleSeriesRef.current.setData(seriesData)
+
+    // очищаем старые уровни (важно)
+    candleSeriesRef.current.priceLines().forEach(line => {
+      candleSeriesRef.current?.removePriceLine(line)
+    })
+
+    mockLevels.forEach(level => {
+      candleSeriesRef.current?.createPriceLine({
+        price: level.price,
+        color:
+          level.type === 'support'
+            ? '#22c55e'
+            : level.type === 'resistance'
+              ? '#ef4444'
+              : '#f59e0b',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: level.type,
+      })
+    })
+
+    chartRef.current?.timeScale().fitContent()
   }, [seriesData])
 
   return (
-    <div className="space-y-4 rounded-3xl border border-border bg-card p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="rounded-xl border bg-card p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Свечный график</h2>
-          <p className="text-sm text-muted-foreground">Live инструмент с селектором временных рамок.</p>
+          <h2 className="text-lg font-semibold">
+            Свечной график
+          </h2>
         </div>
+
         <div className="flex gap-2">
-          {timeframeOptions.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onSelectTimeframe(option)}
-              className={`rounded-full px-3 py-1.5 text-sm transition ${
-                selectedTimeframe === option
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
+          {timeframeOptions.map((tf) => (
+            <Button
+              key={tf}
+              variant={selectedTimeframe === tf ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onSelectTimeframe(tf)}
             >
-              {option}
-            </button>
+              {tf}
+            </Button>
           ))}
         </div>
       </div>
-      <div className="h-[420px]" ref={chartRef} />
+
+      <div
+        ref={containerRef}
+        className="h-[650px] w-full"
+      />
     </div>
   )
 }

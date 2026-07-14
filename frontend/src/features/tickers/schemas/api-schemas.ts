@@ -48,6 +48,41 @@ export const topMoverSchema = z.object({
   direction: z.enum(['up', 'down']),
 })
 
+export const levelSchema = z.object({
+  price: z.number(),
+  type: z.enum([
+    'support',
+    'resistance',
+    'mirror',
+    'trend',
+  ]),
+  strength: z.number().min(0).max(100),
+})
+
+export const technicalStatusSchema = z.object({
+  atr: z.number(),
+  rsi: z.number(),
+  movePercentage: z.number(),
+  distanceToLevel: z.number(),
+  volatility: z.number(),
+  trendStrength: z.number(),
+  volume: z.number(),
+})
+
+export const aiReportSchema = z.object({
+  title: z.string(),
+  report: z.string(),
+  generatedAt: z.string(),
+  status: z.enum([
+    'ready',
+    'generating',
+    'failed',
+  ]),
+})
+
+export type Level = z.infer<typeof levelSchema>
+export type TechnicalStatus = z.infer<typeof technicalStatusSchema>
+export type AIReport = z.infer<typeof aiReportSchema>
 export type Ticker = z.infer<typeof tickerSchema>
 export type TickerDetail = z.infer<typeof tickerDetailSchema>
 export type Candle = z.infer<typeof candleSchema>

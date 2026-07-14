@@ -119,3 +119,21 @@ export const mockSupportTopics = [
   { id: createId(), title: 'Integrate custom strategy signals', status: 'open' },
   { id: createId(), title: 'Request for new AI explainability views', status: 'in-progress' },
 ]
+
+export const mockAIReport = {
+  report: `
+Инструмент AAPL подошёл к зеркальному уровню 190.
+
+Наблюдается локальная консолидация после импульса роста.
+
+RSI на H4 = 72, что указывает на перекупленность.
+
+Объём растёт, но без подтверждения продолжения тренда.
+
+Рекомендация:
+— не входить в лонг на текущих уровнях
+— ожидать либо ложный пробой уровня 190
+— либо откат к зоне 185–186
+— при подтверждении слабости покупателя рассматривать шорт
+`,
+}
