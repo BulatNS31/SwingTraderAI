@@ -1,0 +1,34 @@
+---
+title: "Overview"
+description: "Краткий обзор проекта SwingTraderAI — что делает, для кого и как работает."
+---
+
+# Обзор — SwingTraderAI
+
+SwingTraderAI — проект для технического анализа акций и криптовалют с комбинированным подходом: классические rule-based индикаторы + AI (LLM) для интерпретации рыночного контекста.
+
+## Кто это использует
+
+- Ритейл трейдеры (особенно MOEX и крипто)
+- Swing-traders, желающие получать готовые идеи и краткие объяснения
+- Пользователи Telegram, желающие получать уведомления и дайджесты
+
+## Основные возможности (из кода и README)
+
+- **Источники данных**: MOEX (через yfinance) и крипто через ccxt (см. pyproject.toml и README)
+- **Техническая аналитика**: расчёт множества индикаторов (pandas_ta, pandas)
+- **Rule-based сигналы + AI-интерпретация** (LangGraph / LangChain / внешние LLM)
+- **Хранение истории** в PostgreSQL (SQLAlchemy/Alembic)
+- **Telegram-уведомления** (aiogram) — используется для оповещений
+- **FastAPI backend** + background jobs (Celery/APScheduler/Redis)
+
+## Архитектурный обзор
+
+- **Backend**: FastAPI — см. [swingtraderai/main.py](/swingtraderai/main.py)
+- **Frontend**: Vite-based SPA в папке `frontend/` — см. `frontend/`
+- **AI layer**: LangGraph / LangChain integration (см. `swingtraderai/services` и зависимости в pyproject.toml)
+
+## Ограничения и важные замечания
+
+- Не всё, что описано в README или ARCHITECTURE-RUS.md подтверждено кодом — такие места помечены TODO в соответствующих разделах.
+- Проект содержит зачатки multi-tenancy. Конкретные политики (RLS) требуют проверки в коде (см. `swingtraderai/core/tenant.py`).

@@ -1,0 +1,19 @@
+---
+title: "Code Style"
+description: "Formatting & linting rules"
+---
+
+# Code style & linters
+
+Используются (`pyproject.toml`):
+
+- **Black** — форматирование (`poetry run black .`)
+- **Ruff** — lint (`poetry run ruff check . --fix`)
+- **Mypy** — типы (`poetry run mypy .`)
+- **pre-commit** — конфигурация в `.pre-commit-config.yaml`
+
+## Пример pre-commit check
+
+```bash
+pre-commit run --all-files
+```

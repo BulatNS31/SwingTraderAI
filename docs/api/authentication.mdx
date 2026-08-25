@@ -1,0 +1,25 @@
+---
+title: "Authentication"
+description: "Как работает авторизация: JWT, токены и зависимости"
+---
+
+# Authentication
+
+- `OAuth2PasswordBearer` используется (`swingtraderai/api/deps.py`).
+- JWT tokens: created/decoded в `swingtraderai/core/security.py`.
+- Access token expiry: `ACCESS_TOKEN_EXPIRE_MINUTES` (env).
+- `get_current_user` dependency decodes token and loads User (see `api/deps.py`).
+
+## Endpoints
+
+- `POST /api/v1/auth/register` — registers and returns Token
+- `POST /api/v1/auth/login` — returns Token
+
+## Notes & Security
+
+- Ensure `SECRET_KEY` & `ALGORITHM` are set.
+- Password hashing via argon2 (passlib) — good default.
+
+## TODO
+
+- Document refresh token flow if implemented (there is `create_refresh_token` in code, but refresh endpoint presence should be verified).

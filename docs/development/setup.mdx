@@ -1,0 +1,39 @@
+---
+title: "Setup"
+description: "Локальная разработка: dependencies, versions, and environment"
+---
+
+# Setup — локальная разработка
+
+## Требования
+
+- Python 3.12 — 3.14 (`pyproject.toml`)
+- Node.js (проверьте версию в `frontend/package.json`)
+- Poetry (если используете)
+- Docker & Docker Compose (опционально, для Postgres/Redis)
+
+## Пример команд (подтверждено README)
+
+```bash
+# Установить зависимости (poetry)
+poetry install
+
+# Запустить backend
+uvicorn swingtraderai.main:app --reload
+```
+
+## Frontend
+
+```bash
+cd frontend
+yarn install
+yarn dev
+```
+
+## Docker
+
+`docker-compose.yml` содержит сервисы для api, worker, postgres, redis, ml-worker — используйте для локального тестирования с Docker.
+
+## TODO
+
+- Добавить точные версии Node/Python.

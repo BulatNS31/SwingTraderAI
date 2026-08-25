@@ -1,0 +1,26 @@
+---
+title: "API Overview"
+description: "Обзор FastAPI endpoints и их группировка"
+---
+
+# API Overview
+
+## Основные route-groups (подтверждённо по коду `swingtraderai/api/v1`)
+
+| Prefix               | Description                         | File            |
+|----------------------|-------------------------------------|-----------------|
+| `/api/v1/auth`       | registration, login, password reset | `auth.py`       |
+| `/api/v1/users`      | user profile endpoints              | `users.py`      |
+| `/api/v1/tickers`    | ticker CRUD, search                 | `tickers.py`    |
+| `/api/v1/watchlist`  | user watchlist endpoints            | `watchlist.py`  |
+| `/api/v1/indicators` | indicators endpoints                | `indicators.py` |
+| `/api/v1/markets`    | market info                         | `markets.py`    |
+
+## Примеры
+
+- `POST /api/v1/auth/register` — register (see `auth.register`)
+- `POST /api/v1/auth/login` — login (OAuth2 password form)
+
+## TODO
+
+- Добавить OpenAPI snippets (FastAPI provides `/docs`) and example responses.

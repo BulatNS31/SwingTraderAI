@@ -1,0 +1,30 @@
+---
+title: "Backend"
+description: "Описание backend-архитектуры: API → Services → Repositories → DB"
+---
+
+# Backend
+
+## Основные папки
+
+- `swingtraderai/main.py` — точка входа FastAPI, middleware, rate limiting.
+- `swingtraderai/api/v1/` — routers: `auth.py`, `users.py`, `tickers.py`, `watchlist.py`, `indicators.py`, `markets.py`.
+- `swingtraderai/api/services/` — бизнес-логика (TickerService, WatchlistService, AuthService, и т.д.).
+- `swingtraderai/api/repositories/` — DB access layer; используется Tenant-aware base repository.
+- `swingtraderai/db/models/` — SQLAlchemy models.
+- `swingtraderai/db/session.py` — async session configuration.
+
+## Реальная ответственность слоёв
+
+| Слой         | Ответственность                                      |
+|--------------|------------------------------------------------------|
+| API          | валидация запроса, аутентификация, вызов сервисов   |
+| Services     | оркестрация, валидация бизнес-логики                 |
+| Repositories | низкоуровневые запросы к БД (tenant filtering)       |
+| DB           | хранение данных и миграции (alembic)                 |
+
+## Ссылки на реальные файлы
+
+- `main.py`
+- `api/v1/watchlist.py`
+- `db/models/user.py`

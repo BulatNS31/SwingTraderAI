@@ -1,0 +1,32 @@
+---
+title: "Signals"
+description: "Описание торговых сигналов, их структура и flow"
+---
+
+# Signals
+
+## Что подтверждено
+
+- В проекте есть rule-based signals и placeholders для ML/AI signals (см. `TickerService.get_trading_signals`).
+- Сигналы хранятся в БД (судя по README «full history of analyses and signals in PostgreSQL»).
+
+## Структура
+
+Пример возвращаемого сигнала в `ticker_service.py`:
+
+- `ticker_id`
+- `period`
+- `signal` (buy/sell/hold)
+- `confidence`
+- `reason`
+- `timestamp`
+
+## Flow
+
+```
+Сбор данных → индикаторы → правила → (опционально) ML model → создание/сохранение сигнала → уведомление (Telegram) / показ в UI
+```
+
+## TODO
+
+- Указать конкретные таблицы/модели сигналов (если есть Signal model в `db/models`) — добавить ссылку.

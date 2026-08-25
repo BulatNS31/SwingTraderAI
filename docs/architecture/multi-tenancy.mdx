@@ -1,0 +1,20 @@
+---
+title: "Multi-Tenancy"
+description: "Механизм multi-tenancy, как он реализован в проекте"
+---
+
+# Multi-Tenancy
+
+## Что подтверждено кодом
+
+- `TenantBase` (в `swingtraderai/db/base.py`) — модели имеют поле `tenant_id`.
+- `swingtraderai/core/tenant.py` содержит dependency `get_current_tenant_id` — извлечение `tenant_id` из текущего пользователя.
+- Многие репозитории используют tenant-aware базу (см. `swingtraderai/api/repositories`).
+
+## Важно
+
+README упоминает подготовленную RLS (Row Level Security), но код содержит заготовки — не утверждаю, что RLS полностью настроено на уровне БД. Это требует проверки и правок DevOps/DBA.
+
+## TODO
+
+- Провести аудит всех запросов репозиториев на предмет явной фильтрации по `tenant_id` (приготовил задачу в issues).

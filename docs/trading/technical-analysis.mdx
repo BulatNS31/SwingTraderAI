@@ -1,0 +1,23 @@
+---
+title: "Technical Analysis"
+description: "Какие индикаторы и как используются"
+---
+
+# Technical Analysis
+
+## Инструменты
+
+- `pandas_ta` и `pandas` (`pyproject.toml`)
+- В коде есть сервис `swingtraderai/api/services/ticker_service.py` с местом для расчётов индикаторов (`get_technical_indicators`). В реальной реализации нужно подтвердить, какие индикаторы вычисляются централизованно.
+
+## Упоминаемые индикаторы (в документации)
+
+- ATR, RSI, MACD, EMA, SMA, support/resistance, overbought/oversold
+
+## Подтверждение
+
+В `ticker_service.py` есть placeholder для RSI/MACD/SMA; нужно посмотреть каталог `swingtraderai/indicators` или `swingtraderai/api/services/indicators` для фактических реализаций.
+
+## TODO
+
+- Найти файлы с реализацией расчётов индикаторов и добавить примеры.

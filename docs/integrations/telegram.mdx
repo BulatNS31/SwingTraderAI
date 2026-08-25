@@ -1,0 +1,19 @@
+---
+title: "Telegram Integration"
+description: "Описание Telegram bot и связки с backend"
+---
+
+# Telegram Integration
+
+- README и docker/quickstart упоминают aiogram bot (`python -m bots.telegram.bot`).
+- User model содержит `telegram_id` и `telegram_verified` поля.
+- Notifications pipeline: digest/notifications → worker → Telegram bot.
+
+## Как настраивать
+
+1. Установите `TELEGRAM_BOT_TOKEN` в `.env`.
+2. Бот обычно запускается как отдельный process (см. docker-compose or bots module if present).
+
+## TODO
+
+- В кодовой базе может отсутствовать каталог `bots/telegram`; если он отсутствует, добавьте инструкции по установке/настройке бота и примеры сообщений.

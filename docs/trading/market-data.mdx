@@ -1,0 +1,25 @@
+---
+title: "Market Data"
+description: "Источники данных и обработка market data"
+---
+
+# Market Data
+
+## Подтверждённые провайдеры (pyproject.toml / README)
+
+- MOEX (через yfinance и moexalgo)
+- Crypto exchanges (через ccxt) — Binance/Bybit/OKX упоминаются в README
+
+## Реальные файлы
+
+- Проверьте модули в `swingtraderai/services/` для конкретных адаптеров (yfinance, ccxt, moexalgo).
+- Таблица `MarketData` в `swingtraderai/db/models/market.py` хранит OHLCV candles (см. `TickerService.get_historical_data`).
+
+## Рекомендации
+
+- Добавить retries + timeout + caching.
+- Добавить stale detection и пометку в UI.
+
+## TODO
+
+- Вставить ссылки на реальные адаптеры (файлы) если они присутствуют в кодовой базе.

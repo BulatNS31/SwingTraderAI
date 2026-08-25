@@ -1,0 +1,24 @@
+---
+title: "Architecture Overview"
+description: "Краткое описание архитектуры SwingTraderAI"
+---
+
+# Архитектура — обзор
+
+SwingTraderAI — слоистая архитектура:
+
+- **Frontend** (Vite SPA) — взаимодействует с API.
+- **Backend** (FastAPI) — API, сервисы, репозитории, background workers.
+- **Database** (Postgres via SQLAlchemy + Alembic).
+- **Cache/Broker** (Redis) — для Celery/queues & caching.
+- **AI Layer** (LangGraph / LangChain) — зовёт внешние LLM провайдеры.
+- **Notifications** (Telegram bot).
+
+## Основные слои в backend
+
+- **API layer** (`swingtraderai/api/v1/`) — маршруты/routers (auth, tickers, watchlist, indicators, markets, users).
+- **Services** (`swingtraderai/api/services/`) — оркестрация бизнес-логики.
+- **Repositories** (`swingtraderai/api/repositories/`) — доступ к БД, tenant-aware базовый репозиторий.
+- **DB models** (`swingtraderai/db/models/`) — SQLAlchemy модели.
+
+См. также `swingtraderai/main.py` и `README.md`.

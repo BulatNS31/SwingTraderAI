@@ -1,0 +1,37 @@
+---
+title: "AI Layer"
+description: "Где и как используется AI в проекте"
+---
+
+# AI Layer
+
+## Подтверждённое в коде и project metadata
+
+- В `pyproject.toml` перечислены `langchain` и `langgraph`.
+- README упоминает LangGraph + LLMs (Claude, GPT, Gemini).
+- AI используется для интерпретации контекста и создания объяснений, а не для замены детерминированных сигналов.
+
+## Где AI запускается
+
+- Через сервисы в backend (вероятно в `swingtraderai/api/services/`).
+- Background workers запрашивают LLM по мере необходимости (например, при создании дайджеста).
+
+## Input
+
+Подготовленные результаты технического анализа (цены, индикаторы, сигналы), контекст рынка.
+
+## Processing
+
+Формирование prompt-ов (LangGraph / LangChain), вызов внешнего провайдера.
+
+## Output
+
+Короткие human-readable объяснения, reason fields для signal records.
+
+## Рекомендации
+
+- Добавить кэширование, token accounting и бюджетные fallback-стратегии (cheap model).
+
+## TODO
+
+- Указать точные модули, которые реализуют интеграцию с LLM — найти в кодовой базе.

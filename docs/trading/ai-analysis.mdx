@@ -1,0 +1,27 @@
+---
+title: "AI Analysis"
+description: "Практический pipeline AI analysis: input → processing → output"
+---
+
+# AI Analysis — pipeline
+
+## Input
+
+Price history, indicators, detected rule-based signals, market context.
+
+## Processing
+
+- Prompt composition (via LangGraph/LangChain)
+- LLM call(s) to produce natural-language reasoning/explanation
+
+## Output
+
+Short human-readable explanation; fields: `reason`, confidence estimate (if produced), structured tags (optional).
+
+## Notes
+
+AI never replaces deterministic logic; used for context & explainability.
+
+## TODO
+
+- Save example prompt/response (extract from code if available).

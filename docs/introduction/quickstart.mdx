@@ -1,0 +1,89 @@
+---
+title: "Quick Start"
+description: "Быстрый запуск проекта локально (ссылки на реальные инструкции README и docker-compose)"
+---
+
+# Quick Start (локально)
+
+Ниже — команды и шаги, подтверждённые README и docker-compose.yml.
+
+## Prerequisites
+
+- Python 3.12 — 3.14 (pyproject.toml требует >=3.12)
+- Node.js и Yarn (для frontend) — проверьте `frontend/package.json`
+- Docker & docker-compose (опционально для сервисов Postgres/Redis)
+
+## 1. Клонировать репозиторий
+
+```bash
+git clone <repo-url>
+cd SwingTraderAI
+```
+
+## 2. Установить зависимости (локально без Docker)
+
+Проект использует Poetry (pyproject.toml).
+
+```bash
+# Если вы используете poetry:
+poetry install
+```
+
+(Если используете pip/venv — создайте виртуальное окружение и установите зависимости из pyproject.toml)
+
+## 3. Настройка environment variables
+
+Скопируйте `.env` пример (в корне репозитория может быть шаблон) и заполните:
+
+- `DATABASE_URL`
+- `REDIS_URL`
+- `SECRET_KEY` и `ALGORITHM`
+- `TELEGRAM_BOT_TOKEN` (если хотите тестировать бота)
+- LLM provider keys (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` и т.д. если используются)
+
+README содержит пример `.env`.
+
+## 4. Инфраструктура (с Docker)
+
+Для локальной разработки можно поднять Postgres и Redis:
+
+```bash
+docker run -d --name ta-postgres -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:16
+# или использовать docker-compose.yml
+docker compose up -d postgres redis
+```
+
+## 5. Миграции БД
+
+Примените alembic migrations, если они есть:
+
+```bash
+alembic upgrade head
+```
+
+(см. `alembic.ini`)
+
+## 6. Запуск backend
+
+```bash
+uvicorn swingtraderai.main:app --reload --port 8000
+```
+
+## 7. Запуск frontend (если требуется)
+
+В директории `frontend/`:
+
+```bash
+cd frontend
+yarn install
+yarn dev
+```
+
+## 8. Запуск Telegram-bot (опционально)
+
+README упоминает запуск `python -m bots.telegram.bot`, однако в кодовой базе может не быть папки `bots/` в текущем состоянии — если у вас есть `bots/telegram`, запустите согласно инструкциям.
+
+## Замечания / TODO
+
+- Проверьте наличие `poetry.lock` / `yarn.lock` для точных версий.
+- Если у вас нет docker-compose или вы предпочитаете managed services — используйте Render/Neon/Supabase для Postgres.

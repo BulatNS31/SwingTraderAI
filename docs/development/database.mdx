@@ -1,0 +1,27 @@
+---
+title: "Database"
+description: "Основные сущности, модели и связи"
+---
+
+# Database (models overview)
+
+## Ключевые модели (подтверждено в `swingtraderai/db/models`)
+
+- **User** (`users`) — `swingtraderai/db/models/user.py`
+- **Ticker**, **MarketData** (`tickers`, `market_data`) — `swingtraderai/db/models/market.py`
+- **Position**, **Portfolio** — `swingtraderai/db/models/portfolio.py`, position в `user.py`
+- **Watchlist** models — см. `swingtraderai/schemas/watchlist.py` и `api/v1/watchlist.py`
+
+## ER-диаграмма
+
+```
+User 1──* Position
+User 1──* WatchlistItem
+Ticker 1──* MarketData
+Ticker 1──* Signal
+User 1──1 Portfolio
+```
+
+## TODO
+
+- Автоматически сгенерировать полную ER-diagram из моделей (можно использовать sqlalchemy-inspect).

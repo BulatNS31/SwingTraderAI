@@ -1,0 +1,20 @@
+---
+title: "Frontend"
+description: "Описание реальной frontend architecture"
+---
+
+# Frontend
+
+## Реализация
+
+- Папка `frontend/` содержит Vite-проект (`package.json`, `src/`, `tailwind.config.ts`).
+- Это SPA — конкретный фреймворк подтверждается содержимым `frontend/src/` (проверьте файлы для подтверждения).
+
+## Frontend ↔ Backend
+
+- SPA делает запросы к FastAPI API (`/api/v1/*`).
+- Аутентификация — через токены (OAuth2 Password flow в backend). См. `swingtraderai/api/v1/auth.py`.
+
+## TODO
+
+- Детализировать используемые frontend-технологии (React/TSX/Vue) — проверить `frontend/src`.

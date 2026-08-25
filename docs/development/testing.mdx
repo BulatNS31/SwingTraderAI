@@ -1,0 +1,26 @@
+---
+title: "Testing"
+description: "Как запускать тесты и структура тестов"
+---
+
+# Testing
+
+Pytest настроен (`pyproject.toml`, pytest settings).
+
+## Запуск тестов
+
+```bash
+poetry run pytest
+```
+
+## Маркеры
+
+`asyncio`, `slow`, `db` — определены в `pyproject.toml`.
+
+## Структура
+
+В проекте есть `tests/` — проверьте структуру и ключевые тесты.
+
+## TODO
+
+- Сформировать список приоритетных тестов (auth, digest, webhook, watchlist).
