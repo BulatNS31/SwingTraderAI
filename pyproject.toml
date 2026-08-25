@@ -107,7 +107,7 @@ strict = true
 ignore_missing_imports = true
 disallow_untyped_decorators = false
 plugins = ["pydantic.mypy"]
-exclude = ["tests/.*", "alembic/.*", "celery/.*", ".tools/.*", "frontend/*"]
+exclude = ["tests/.*", "alembic/.*", "celery/.*", ".tools/.*", "frontend/*", ".github/*"]
 
 [tool.pydantic-mypy]
 init_forbid_extra = true

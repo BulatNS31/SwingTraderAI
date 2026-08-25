@@ -26,12 +26,20 @@ class Ticker(Base):
 	)
 	symbol: Mapped[str] = mapped_column(String(20), nullable=False)
 	asset_type: Mapped[str] = mapped_column(String(10), nullable=False)
-	exchange_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-		UUID(as_uuid=True), ForeignKey("exchanges.id", ondelete="SET NULL"), index=True
+	exchange_id: Mapped[uuid.UUID] = mapped_column(
+		UUID(as_uuid=True),
+		ForeignKey("exchanges.id", ondelete="CASCADE"),
+		nullable=False,
+		index=True,
 	)
 	base_currency: Mapped[str | None] = mapped_column(String(10))
 	quote_currency: Mapped[str | None] = mapped_column(String(10))
-	is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+	is_active: Mapped[bool] = mapped_column(
+		Boolean,
+		default=True,
+		nullable=False,
+		index=True,
+	)
 	created_at: Mapped[datetime] = mapped_column(
 		TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc)
 	)

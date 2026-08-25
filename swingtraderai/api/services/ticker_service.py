@@ -37,6 +37,38 @@ class TickerService:
 			raise HTTPException(status_code=404, detail="Ticker not found")
 		return ticker
 
+	async def get_or_create(
+		self, symbol: str, exchange_id: UUID | None = None, name: str | None = None
+	) -> Ticker:
+		"""Получает тикер из БД или создает его, если он отсутствует."""
+		symbol = symbol.upper().strip()
+
+		# 1. Сначала пытаемся найти существующий тикер через репозиторий
+		ticker = await self.repo.get_by_symbol(symbol)
+		if ticker:
+			return ticker
+
+		# 2. Если тикер не найден, подготавливаем схему для создания
+		ticker_data = TickerCreate(
+			symbol=symbol,
+			asset_type="stock",
+			exchange_id=exchange_id,
+			is_active=False,
+		)
+
+		# 3. Безопасное создание с обработкой состояния гонки (Race Condition)
+		try:
+			# Создаем точку сохранения (savepoint), чтобы откат не ломал всю транзакцию
+			async with self.session.begin_nested():
+				ticker = await self.repo.create(ticker_data.model_dump())
+				return ticker
+		except Exception:
+			# Если запись создалась параллельным потоком, извлекаем её
+			ticker = await self.repo.get_by_symbol(symbol)
+			if ticker:
+				return ticker
+			raise
+
 	async def search(self, q: str, limit: int = 20) -> List[Ticker]:
 		if len(q) < 1:
 			raise HTTPException(status_code=400, detail="Search query too short")
@@ -48,6 +80,17 @@ class TickerService:
 		return await self.repo.bulk_create_or_update(
 			[t.model_dump() for t in tickers_in]
 		)
+
+	async def get_active_by_exchange(
+		self,
+		exchange_id: UUID,
+	) -> List[Ticker]:
+		"""
+		Возвращает только активные тикеры выбранной биржи.
+		Используется для MarketSyncService.
+		"""
+
+		return await self.repo.get_active_by_exchange(exchange_id)
 
 	async def get_historical_data(
 		self,

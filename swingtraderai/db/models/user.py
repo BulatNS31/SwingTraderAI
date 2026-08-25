@@ -52,6 +52,19 @@ class User(TenantBase):
 	telegram_verified: Mapped[bool] = mapped_column(
 		Boolean, default=False, nullable=False
 	)
+
+	# Billing / subscription fields
+	stripe_customer_id: Mapped[str | None] = mapped_column(
+		String(255), nullable=True, index=True
+	)
+	subscription_status: Mapped[str] = mapped_column(
+		String(50), nullable=False, server_default=text("'free'")
+	)
+	subscription_tier: Mapped[str | None] = mapped_column(String(50), nullable=True)
+	subscription_current_period_end: Mapped[datetime | None] = mapped_column(
+		TIMESTAMP(timezone=True), nullable=True
+	)
+
 	is_active: Mapped[bool] = mapped_column(
 		Boolean, default=True, server_default=text("true"), nullable=False
 	)

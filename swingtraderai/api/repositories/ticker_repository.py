@@ -58,6 +58,20 @@ class TickerRepository(BaseRepository[Ticker]):
 		result = await self.session.execute(query)
 		return result.scalar_one_or_none()
 
+	async def get_active_by_exchange(self, exchange_id: UUID) -> List[Ticker]:
+		"""
+		Возвращает активные тикеры для конкретной биржи.
+		"""
+		query = (
+			select(Ticker)
+			.where(Ticker.exchange_id == exchange_id)
+			.where(Ticker.is_active)
+			.order_by(Ticker.symbol)
+			.options(joinedload(Ticker.exchange_ref))
+		)
+		result = await self.session.execute(query)
+		return list(result.scalars().all())
+
 	async def bulk_create_or_update(
 		self, tickers_data: List[Dict[str, Any]]
 	) -> List[Ticker]:

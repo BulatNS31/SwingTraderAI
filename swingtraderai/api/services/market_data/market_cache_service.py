@@ -18,7 +18,7 @@ class MarketCacheService:
 		self, tenant_id: UUID, quotes: List[MarketQuoteSchema]
 	) -> None:
 		for q in quotes:
-			await self.repo.upsert_from_quote(tenant_id, q)
+			await self.repo.upsert_by_symbol(tenant_id, q.symbol, q)
 
 	async def get_snapshot(self, tenant_id: UUID) -> Dict[str, Any]:
 		# return grouped snapshot

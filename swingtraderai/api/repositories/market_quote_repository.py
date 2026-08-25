@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import Optional, Sequence
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -16,13 +16,13 @@ class MarketQuoteRepository(TenantAwareRepository[MarketQuoteSnapshot]):
 	def __init__(self, session: AsyncSession):
 		super().__init__(session, MarketQuoteSnapshot)
 
-	async def get_by_symbol(
-		self, tenant_id: UUID, symbol: str
+	async def get_by_ticker_id(
+		self, tenant_id: UUID, ticker_id: UUID
 	) -> Optional[MarketQuoteSnapshot]:
+		"""Получение snapshot котировки напрямую по ticker_id."""
 		query = (
 			self._get_tenant_query(tenant_id)
-			.join(Ticker, Ticker.id == MarketQuoteSnapshot.ticker_id)
-			.where(Ticker.symbol == symbol)
+			.where(MarketQuoteSnapshot.ticker_id == ticker_id)
 			.options(joinedload(MarketQuoteSnapshot.ticker))
 		)
 		result = await self.session.execute(query)
@@ -44,44 +44,52 @@ class MarketQuoteRepository(TenantAwareRepository[MarketQuoteSnapshot]):
 		result = await self.session.execute(query)
 		return result.scalars().all()
 
-	async def upsert_from_quote(
-		self, tenant_id: UUID, quote: MarketQuoteSchema
+	async def upsert_by_symbol(
+		self, tenant_id: UUID, symbol: str, quote: MarketQuoteSchema
 	) -> Optional[MarketQuoteSnapshot]:
-		query = select(Ticker).where(Ticker.symbol == quote.symbol).limit(1)
-		res = await self.session.execute(query)
-		ticker = res.scalar_one_or_none()
+		"""Обновить или создать котировку по символу."""
+		# Находим тикер
+		ticker_query = select(Ticker).where(Ticker.symbol == symbol.upper())
+		ticker_result = await self.session.execute(ticker_query)
+		ticker = ticker_result.scalar_one_or_none()
 
 		if not ticker:
 			return None
 
-		existing = await self.get_by_symbol(tenant_id, quote.symbol)
+		return await self.upsert_from_quote(tenant_id, ticker.id, quote)
+
+	async def upsert_from_quote(
+		self, tenant_id: UUID, ticker_id: UUID, quote: MarketQuoteSchema
+	) -> MarketQuoteSnapshot:
+		"""
+		Создает или обновляет snapshot котировки по ticker_id.
+		Поиск и создание Ticker выполняется снаружи (в Service).
+		"""
+		existing = await self.get_by_ticker_id(tenant_id, ticker_id)
+
+		price_val = Decimal(str(quote.price)) if quote.price is not None else None
+		change_val = (
+			Decimal(str(quote.change_percent))
+			if quote.change_percent is not None
+			else None
+		)
+		volume_val = Decimal(str(quote.volume)) if quote.volume is not None else None
+
 		if existing:
-			existing.price = (
-				Decimal(str(quote.price)) if quote.price is not None else None
-			)
-			existing.change_percent = (
-				Decimal(str(quote.change_percent))
-				if quote.change_percent is not None
-				else None
-			)
-			existing.volume = (
-				Decimal(str(quote.volume)) if quote.volume is not None else None
-			)
+			existing.price = price_val
+			existing.change_percent = change_val
+			existing.volume = volume_val
 			existing.updated_at = quote.updated_at
 			await self.session.commit()
 			await self.session.refresh(existing)
 			return existing
 
 		snapshot = MarketQuoteSnapshot(
-			ticker_id=ticker.id,
+			ticker_id=ticker_id,
 			tenant_id=tenant_id,
-			price=Decimal(str(quote.price)) if quote.price is not None else None,
-			change_percent=(
-				float(quote.change_percent)
-				if quote.change_percent is not None
-				else None
-			),
-			volume=Decimal(str(quote.volume)) if quote.volume is not None else None,
+			price=price_val,
+			change_percent=change_val,
+			volume=volume_val,
 			updated_at=quote.updated_at,
 		)
 		self.session.add(snapshot)
@@ -96,6 +104,37 @@ class MarketQuoteRepository(TenantAwareRepository[MarketQuoteSnapshot]):
 			self._get_tenant_query(tenant_id)
 			.order_by(MarketQuoteSnapshot.updated_at.desc())
 			.limit(limit)
+			.options(joinedload(MarketQuoteSnapshot.ticker))
 		)
 		result = await self.session.execute(query)
 		return result.scalars().all()
+
+	async def get_latest_by_ticker(
+		self, tenant_id: UUID, ticker_id: UUID
+	) -> Optional[MarketQuoteSnapshot]:
+		"""Получить последний котировку для конкретного тикера."""
+		query = (
+			self._get_tenant_query(tenant_id)
+			.where(MarketQuoteSnapshot.ticker_id == ticker_id)
+			.order_by(desc(MarketQuoteSnapshot.updated_at))
+			.limit(1)
+			.options(joinedload(MarketQuoteSnapshot.ticker))
+		)
+		result = await self.session.execute(query)
+		return result.scalar_one_or_none()
+
+	# ✅ НОВЫЙ МЕТОД: Получить котировку по символу
+	async def get_by_symbol(
+		self, tenant_id: UUID, symbol: str
+	) -> Optional[MarketQuoteSnapshot]:
+		"""Получить последний котировку по символу тикера."""
+		# Сначала находим тикер по символу
+		ticker_query = select(Ticker).where(Ticker.symbol == symbol.upper())
+		ticker_result = await self.session.execute(ticker_query)
+		ticker = ticker_result.scalar_one_or_none()
+
+		if not ticker:
+			return None
+
+		# Получаем последний котировку для этого тикера
+		return await self.get_latest_by_ticker(tenant_id, ticker.id)

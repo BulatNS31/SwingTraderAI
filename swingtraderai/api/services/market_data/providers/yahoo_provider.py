@@ -3,54 +3,120 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-import yfinance as yf
+import httpx
 
 from swingtraderai.api.services.market_data.providers.base import BaseMarketProvider
+from swingtraderai.schemas.exchanges import Exchanges
 from swingtraderai.schemas.market_data import MarketQuoteSchema
 
 
 class YahooProvider(BaseMarketProvider):
-	"""Provider using yfinance (supports MOEX .ME tickers, US stocks, ETFs, indices)."""
+	"""Provider using Yahoo Finance chart API."""
+
+	BASE_URL = "https://query1.finance.yahoo.com/v8/finance/chart"
+
+	PARAMS = {
+		"interval": "1m",
+		"range": "1d",
+	}
 
 	async def get_quote(self, symbol: str) -> MarketQuoteSchema:
-		loop = asyncio.get_running_loop()
+		async with httpx.AsyncClient(timeout=10) as client:
+			return await self._get_quote_with_client(client, symbol)
 
-		def fetch(s: str) -> Tuple[Optional[float], Optional[float], Optional[float]]:
-			t = yf.Ticker(s)
-			info = t.history(period="1d", interval="1m")
-			if info.empty:
-				# fallback to info dict
-				data = t.info
-				price = data.get("regularMarketPrice")
-				change = data.get("regularMarketChangePercent")
-				vol = data.get("volume")
-			else:
-				last = info.iloc[-1]
-				price = last.get("Close")
-				prev = info.iloc[0].get("Close") if len(info) > 1 else None
-				change = None
-				if prev and price:
-					try:
-						change = float((price - prev) / prev * 100)
-					except Exception:
-						change = None
-				vol = last.get("Volume") if "Volume" in info.columns else None
+	async def get_quotes(self, symbols: List[str]) -> List[MarketQuoteSchema]:
+		async with httpx.AsyncClient(timeout=10) as client:
+			tasks = [self._get_quote_with_client(client, symbol) for symbol in symbols]
 
-			return price, change, vol
+			return await asyncio.gather(*tasks)
 
-		price, change_percent, volume = await loop.run_in_executor(None, fetch, symbol)
+	async def _get_quote_with_client(
+		self,
+		client: httpx.AsyncClient,
+		symbol: str,
+	) -> MarketQuoteSchema:
+		price = None
+		change_percent = None
+		volume = None
+
+		try:
+			response = await client.get(
+				f"{self.BASE_URL}/{symbol}",
+				params=self.PARAMS,
+			)
+
+			response.raise_for_status()
+
+			data = response.json()
+
+			price, change_percent, volume = self._extract_market_data(data)
+
+		except httpx.HTTPError:
+			pass
 
 		return MarketQuoteSchema(
 			symbol=symbol,
-			price=Decimal(price) if price is not None else Decimal("0"),
+			price=Decimal(str(price)) if price is not None else Decimal("0"),
 			change_percent=float(change_percent) if change_percent is not None else 0.0,
 			volume=float(volume) if volume is not None else None,
-			market_type="moex" if symbol.upper().endswith(".ME") else "us",
+			exchange_code=Exchanges.NYSE.code,
 			updated_at=datetime.now(timezone.utc),
 		)
 
-	async def get_quotes(self, symbols: List[str]) -> List[MarketQuoteSchema]:
-		tasks = [self.get_quote(s) for s in symbols]
-		return await asyncio.gather(*tasks)
+	def _extract_market_data(
+		self,
+		data: Dict[str, Any],
+	) -> Tuple[
+		Optional[float],
+		Optional[float],
+		Optional[float],
+	]:
+		try:
+			result = data["chart"]["result"][0]
+
+			meta = result.get("meta", {})
+			quotes = result.get("indicators", {}).get("quote", [])
+
+			if not quotes:
+				return None, None, None
+
+			quote = quotes[0]
+
+			closes = quote.get("close", [])
+			volumes = quote.get("volume", [])
+
+			price = None
+			volume = None
+
+			for value in reversed(closes):
+				if value is not None:
+					price = value
+					break
+
+			for value in reversed(volumes):
+				if value is not None:
+					volume = value
+					break
+
+			previous_close = meta.get("previousClose")
+
+			change_percent = None
+
+			if price is not None and previous_close:
+				change_percent = (price - previous_close) / previous_close * 100
+
+			return (
+				price,
+				change_percent,
+				volume,
+			)
+
+		except (
+			KeyError,
+			IndexError,
+			TypeError,
+			ValueError,
+		):
+			return None, None, None

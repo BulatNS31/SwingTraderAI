@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from swingtraderai.api.services.market_data.providers.ccxt_provider import CCXTProvider
+from swingtraderai.api.services.market_data.providers.ccxt_provider import BybitProvider
 from swingtraderai.api.services.market_data.providers.moex_provider import MoexProvider
 from swingtraderai.api.services.market_data.providers.yahoo_provider import (
 	YahooProvider,
@@ -11,8 +11,8 @@ from swingtraderai.schemas.market_data import MarketQuoteSchema
 
 
 class MarketDataService:
-	def __init__(self, default_crypto_exchange: str = "binance") -> None:
-		self.ccxt = CCXTProvider(exchange_name=default_crypto_exchange)
+	def __init__(self) -> None:
+		self.ccxt = BybitProvider()
 		self.yahoo = YahooProvider()
 		self.moex = MoexProvider()
 

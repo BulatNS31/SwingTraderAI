@@ -30,7 +30,7 @@ class MarketQuoteSchema(BaseModel):
 	price: Decimal
 	change_percent: float
 	volume: Optional[float] = None
-	market_type: str
+	exchange_code: str
 	updated_at: datetime
 
 	model_config = ConfigDict(from_attributes=True)
