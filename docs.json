@@ -1,71 +1,95 @@
 {
-  "site": {
-    "title": "SwingTraderAI — Technical Documentation",
-    "description": "Docs for SwingTraderAI — FastAPI backend, market data, indicators and LLM-powered analysis."
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "SwingTraderAI",
+  "colors": {
+    "primary": "#00A86B",
+    "light": "#E8F5E9",
+    "dark": "#1B5E20"
   },
-  "navigation": [
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "topbarCtaButton": {
+    "name": "GitHub",
+    "url": "https://github.com/BulatNS31/SwingTraderAI"
+  },
+  "anchors": [
     {
-      "title": "Introduction",
-      "pages": [
-        { "title": "Overview", "path": "introduction/overview.mdx" },
-        { "title": "Concept", "path": "introduction/concept.mdx" },
-        { "title": "Quick Start", "path": "introduction/quickstart.mdx" }
-      ]
-    },
-    {
-      "title": "Architecture",
-      "pages": [
-        { "title": "Overview", "path": "architecture/overview.mdx" },
-        { "title": "System Architecture", "path": "architecture/system-architecture.mdx" },
-        { "title": "Data Flow", "path": "architecture/data-flow.mdx" },
-        { "title": "Backend", "path": "architecture/backend.mdx" },
-        { "title": "Frontend", "path": "architecture/frontend.mdx" },
-        { "title": "AI Layer", "path": "architecture/ai-layer.mdx" },
-        { "title": "Multi-Tenancy", "path": "architecture/multi-tenancy.mdx" }
-      ]
-    },
-    {
-      "title": "Trading",
-      "pages": [
-        { "title": "Market Data", "path": "trading/market-data.mdx" },
-        { "title": "Technical Analysis", "path": "trading/technical-analysis.mdx" },
-        { "title": "Signals", "path": "trading/signals.mdx" },
-        { "title": "AI Analysis", "path": "trading/ai-analysis.mdx" }
-      ]
-    },
-    {
-      "title": "Development",
-      "pages": [
-        { "title": "Setup", "path": "development/setup.mdx" },
-        { "title": "Configuration", "path": "development/configuration.mdx" },
-        { "title": "Database", "path": "development/database.mdx" },
-        { "title": "Migrations", "path": "development/migrations.mdx" },
-        { "title": "Testing", "path": "development/testing.mdx" },
-        { "title": "Code Style", "path": "development/code-style.mdx" }
-      ]
-    },
-    {
-      "title": "Frontend",
-      "pages": [
-        { "title": "Overview", "path": "frontend/overview.mdx" },
-        { "title": "User Interface", "path": "frontend/user-interface.mdx" },
-        { "title": "Admin Panel", "path": "frontend/admin-panel.mdx" }
-      ]
-    },
-    {
-      "title": "Integrations",
-      "pages": [
-        { "title": "MOEX", "path": "integrations/moex.mdx" },
-        { "title": "Crypto Exchanges", "path": "integrations/crypto-exchanges.mdx" },
-        { "title": "Telegram", "path": "integrations/telegram.mdx" }
-      ]
-    },
-    {
-      "title": "API",
-      "pages": [
-        { "title": "Overview", "path": "api/overview.mdx" },
-        { "title": "Authentication", "path": "api/authentication.mdx" }
-      ]
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/BulatNS31/SwingTraderAI"
     }
-  ]
+  ],
+  "navigation": {
+    "groups": [
+      {
+        "group": "Introduction",
+        "pages": [
+          "docs/introduction/overview",
+          "docs/introduction/concept",
+          "docs/introduction/quickstart"
+        ]
+      },
+      {
+        "group": "Architecture",
+        "pages": [
+          "docs/architecture/overview",
+          "docs/architecture/system-architecture",
+          "docs/architecture/data-flow",
+          "docs/architecture/backend",
+          "docs/architecture/frontend",
+          "docs/architecture/ai-layer",
+          "docs/architecture/multi-tenancy"
+        ]
+      },
+      {
+        "group": "Trading",
+        "pages": [
+          "docs/trading/market-data",
+          "docs/trading/technical-analysis",
+          "docs/trading/signals",
+          "docs/trading/ai-analysis"
+        ]
+      },
+      {
+        "group": "Development",
+        "pages": [
+          "docs/development/setup",
+          "docs/development/configuration",
+          "docs/development/database",
+          "docs/development/migrations",
+          "docs/development/testing",
+          "docs/development/code-style"
+        ]
+      },
+      {
+        "group": "Frontend",
+        "pages": [
+          "docs/frontend/overview",
+          "docs/frontend/user-interface",
+          "docs/frontend/admin-panel"
+        ]
+      },
+      {
+        "group": "Integrations",
+        "pages": [
+          "docs/integrations/moex",
+          "docs/integrations/crypto-exchanges",
+          "docs/integrations/telegram"
+        ]
+      },
+      {
+        "group": "API",
+        "pages": [
+          "docs/api/overview",
+          "docs/api/authentication"
+        ]
+      }
+    ]
+  },
+  "footerSocials": {
+    "github": "https://github.com/BulatNS31/SwingTraderAI"
+  }
 }
