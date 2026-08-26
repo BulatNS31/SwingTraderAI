@@ -3,10 +3,11 @@ from decimal import Decimal
 
 import pytest
 from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
 
 from swingtraderai.api.services.portfolio.portfolio_service import PortfolioService
-from swingtraderai.db.models.market import Ticker
+from swingtraderai.db.models.market import Exchange, Ticker
 from swingtraderai.schemas.portfolio import PortfolioCreate, PortfolioUpdate
 from swingtraderai.schemas.portfolio_transaction import PortfolioTransactionCreate
 
@@ -19,11 +20,11 @@ class TestPortfolioService:
 		return PortfolioService(session)
 
 	@pytest.fixture
-	async def ticker_btc(self, session):
+	async def ticker_btc(self, session: AsyncSession, sample_exchange: Exchange):
 		ticker = Ticker(
 			symbol="BTCUSDT",
 			asset_type="crypto",
-			exchange_id=None,
+			exchange_id=sample_exchange.id,
 			base_currency="BTC",
 			quote_currency="USD",
 			is_active=True,

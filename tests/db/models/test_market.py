@@ -296,13 +296,8 @@ async def test_market_data_nullable_ohlcv_fields(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_market_data_ingested_at_autofill(session: AsyncSession):
+async def test_market_data_ingested_at_autofill(session: AsyncSession, ticker: Ticker):
 	"""Проверка автоматического заполнения ingested_at"""
-	ticker = Ticker(symbol="XLMUSDT", asset_type="CRYPTO")
-	session.add(ticker)
-	await session.commit()
-	await session.refresh(ticker)
-
 	md = MarketData(
 		ticker_id=ticker.id,
 		timeframe="4h",
@@ -321,13 +316,8 @@ async def test_market_data_ingested_at_autofill(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_market_data_source_field_variants(session: AsyncSession):
+async def test_market_data_source_field_variants(session: AsyncSession, ticker: Ticker):
 	"""Поле source — можно указывать, можно None"""
-	ticker = Ticker(symbol="NEARUSDT", asset_type="CRYPTO")
-	session.add(ticker)
-	await session.commit()
-	await session.refresh(ticker)
-
 	md1 = MarketData(
 		ticker_id=ticker.id,
 		timeframe="1d",
@@ -365,12 +355,7 @@ async def test_market_data_missing_ticker_id_forbidden(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_timestamps_are_utc_aware(session: AsyncSession):
-	ticker = Ticker(symbol="TESTTZ", asset_type="CRYPTO")
-	session.add(ticker)
-	await session.commit()
-	await session.refresh(ticker)
-
+async def test_timestamps_are_utc_aware(session: AsyncSession, ticker: Ticker):
 	md = MarketData(
 		ticker_id=ticker.id,
 		timeframe="5m",

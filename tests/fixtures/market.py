@@ -3,8 +3,8 @@ from decimal import Decimal
 from typing import AsyncGenerator
 
 import pytest_asyncio
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from uuid6 import uuid7
 
 from swingtraderai.api.services.ticker_service import TickerService
 from swingtraderai.api.services.watchlist_service import WatchlistService
@@ -57,16 +57,23 @@ async def ticker_service(session: AsyncSession) -> TickerService:
 
 @pytest_asyncio.fixture
 async def sample_exchange(session: AsyncSession) -> Exchange:
-	"""Создаёт тестовую биржу"""
+	result = await session.execute(select(Exchange).where(Exchange.name == "NASDAQ"))
+	exchange = result.scalar_one_or_none()
+
+	if exchange is not None:
+		return exchange
+
 	exchange = Exchange(
 		name="NASDAQ",
-		code=f"NSDQ_{uuid7().hex[:8]}",
+		code="NASDAQ",
 		timezone="America/New_York",
 		currency="USD",
 	)
+
 	session.add(exchange)
 	await session.flush()
 	await session.refresh(exchange)
+
 	return exchange
 
 
@@ -95,6 +102,50 @@ async def sample_market_data(
 	session.add_all(data)
 	await session.commit()
 	return data
+
+
+@pytest_asyncio.fixture
+async def sample_exchange_moex(session: AsyncSession) -> Exchange:
+	result = await session.execute(select(Exchange).where(Exchange.name == "MOEX"))
+	exchange = result.scalar_one_or_none()
+
+	if exchange is not None:
+		return exchange
+
+	exchange = Exchange(
+		name="MOEX",
+		code="MOEX",
+		timezone="Europe/Moscow",
+		currency="RUB",
+	)
+
+	session.add(exchange)
+	await session.flush()
+	await session.refresh(exchange)
+
+	return exchange
+
+
+@pytest_asyncio.fixture
+async def sample_exchange_binance(session: AsyncSession) -> Exchange:
+	result = await session.execute(select(Exchange).where(Exchange.name == "BINANCE"))
+	exchange = result.scalar_one_or_none()
+
+	if exchange is not None:
+		return exchange
+
+	exchange = Exchange(
+		name="BINANCE",
+		code="BINANCE",
+		timezone="UTC",
+		currency="USDT",
+	)
+
+	session.add(exchange)
+	await session.flush()
+	await session.refresh(exchange)
+
+	return exchange
 
 
 @pytest_asyncio.fixture

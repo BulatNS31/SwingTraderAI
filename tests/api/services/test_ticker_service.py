@@ -7,12 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
 
 from swingtraderai.api.services.ticker_service import TickerService
-from swingtraderai.db.models.market import Ticker
+from swingtraderai.db.models.market import Exchange, Ticker
 from swingtraderai.schemas.ticker import OHLCVDataOut, TickerCreate
 
 
 async def test_create_ticker_success(
-	ticker_service: TickerService, session: AsyncSession
+	ticker_service: TickerService, sample_exchange: Exchange, session: AsyncSession
 ):
 	"""Успешное создание тикера"""
 	ticker_in = TickerCreate(
@@ -20,6 +20,7 @@ async def test_create_ticker_success(
 		asset_type="stock",
 		base_currency="USD",
 		quote_currency="USD",
+		exchange_id=sample_exchange.id,
 		is_active=True,
 	)
 
@@ -31,14 +32,18 @@ async def test_create_ticker_success(
 
 
 async def test_create_ticker_already_exists(
-	ticker_service: TickerService, sample_ticker: Ticker
+	ticker_service: TickerService,
+	sample_ticker: Ticker,
+	sample_exchange: Exchange,
 ):
 	"""Попытка создать тикер с уже существующим символом"""
 	ticker_in = TickerCreate(
-		symbol=sample_ticker.symbol,  # уже существует
+		symbol=sample_ticker.symbol,
 		asset_type="stock",
 		base_currency="USD",
 		quote_currency="USD",
+		exchange_id=sample_exchange.id,
+		is_active=True,
 	)
 
 	with pytest.raises(HTTPException) as exc:
@@ -80,19 +85,24 @@ async def test_search_too_short_query(ticker_service: TickerService):
 	assert "too short" in exc.value.detail.lower()
 
 
-async def test_bulk_create_success(ticker_service: TickerService):
+async def test_bulk_create_success(
+	ticker_service: TickerService,
+	sample_exchange: Exchange,
+):
 	tickers_in = [
 		TickerCreate(
 			symbol="NVDA",
 			asset_type="stock",
 			base_currency="USD",
 			quote_currency="USD",
+			exchange_id=sample_exchange.id,
 		),
 		TickerCreate(
 			symbol="AMZN",
 			asset_type="stock",
 			base_currency="USD",
 			quote_currency="USD",
+			exchange_id=sample_exchange.id,
 		),
 	]
 

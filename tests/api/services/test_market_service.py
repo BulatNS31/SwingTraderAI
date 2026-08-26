@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from typing import List
 from uuid import UUID
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from swingtraderai.api.services.market_service import MarketService
 from swingtraderai.db.models.market import Exchange, MarketData, Ticker
@@ -16,41 +18,17 @@ class TestMarketService:
 	"""Тесты для MarketService"""
 
 	@pytest.fixture
-	async def market_service(self, session):
+	async def market_service(self, session: AsyncSession):
 		return MarketService(session)
 
 	@pytest.fixture
-	async def exchange_nasdaq(self, session):
-		exchange = Exchange(
-			name="NASDAQ",
-			code="NASDAQ",
-			timezone="America/New_York",
-			currency="USD",
-		)
-		session.add(exchange)
-		await session.flush()
-		await session.refresh(exchange)
-		return exchange
-
-	@pytest.fixture
-	async def exchange_moex(self, session):
-		exchange = Exchange(
-			name="MOEX",
-			code="MOEX",
-			timezone="Europe/Moscow",
-			currency="RUB",
-		)
-		session.add(exchange)
-		await session.flush()
-		await session.refresh(exchange)
-		return exchange
-
-	@pytest.fixture
-	async def ticker_aapl(self, session, exchange_nasdaq):
+	async def ticker_aapl(
+		self, session: AsyncSession, sample_exchange: Exchange
+	) -> Ticker:
 		ticker = Ticker(
 			symbol="AAPL",
 			asset_type="stock",
-			exchange_id=exchange_nasdaq.id,
+			exchange_id=sample_exchange.id,
 			base_currency="USD",
 			quote_currency="USD",
 			is_active=True,
@@ -61,11 +39,13 @@ class TestMarketService:
 		return ticker
 
 	@pytest.fixture
-	async def ticker_googl(self, session, exchange_nasdaq):
+	async def ticker_googl(
+		self, session: AsyncSession, sample_exchange: Exchange
+	) -> Ticker:
 		ticker = Ticker(
 			symbol="GOOGL",
 			asset_type="stock",
-			exchange_id=exchange_nasdaq.id,
+			exchange_id=sample_exchange.id,
 			base_currency="USD",
 			quote_currency="USD",
 			is_active=True,
@@ -76,11 +56,13 @@ class TestMarketService:
 		return ticker
 
 	@pytest.fixture
-	async def ticker_btc(self, session):
+	async def ticker_btc(
+		self, session: AsyncSession, sample_exchange_binance: Exchange
+	) -> Ticker:
 		ticker = Ticker(
 			symbol="BTCUSDT",
 			asset_type="crypto",
-			exchange_id=None,
+			exchange_id=sample_exchange_binance.id,
 			base_currency="BTC",
 			quote_currency="USD",
 			is_active=True,
@@ -91,11 +73,13 @@ class TestMarketService:
 		return ticker
 
 	@pytest.fixture
-	async def ticker_eth(self, session):
+	async def ticker_eth(
+		self, session: AsyncSession, sample_exchange_binance: Exchange
+	) -> Ticker:
 		ticker = Ticker(
 			symbol="ETHUSDT",
 			asset_type="crypto",
-			exchange_id=None,
+			exchange_id=sample_exchange_binance.id,
 			base_currency="ETH",
 			quote_currency="USD",
 			is_active=True,
@@ -106,11 +90,13 @@ class TestMarketService:
 		return ticker
 
 	@pytest.fixture
-	async def ticker_sber(self, session, exchange_moex):
+	async def ticker_sber(
+		self, session: AsyncSession, sample_exchange_moex: Exchange
+	) -> Ticker:
 		ticker = Ticker(
 			symbol="SBER",
 			asset_type="stock",
-			exchange_id=exchange_moex.id,
+			exchange_id=sample_exchange_moex.id,
 			base_currency="RUB",
 			quote_currency="RUB",
 			is_active=True,
@@ -121,7 +107,9 @@ class TestMarketService:
 		return ticker
 
 	@pytest.fixture
-	async def market_data_aapl(self, session, ticker_aapl):
+	async def market_data_aapl(
+		self, session: AsyncSession, ticker_aapl: Ticker
+	) -> List[MarketData]:
 		"""Создает тестовые данные MarketData для AAPL"""
 		now = datetime.now(timezone.utc)
 		data = [
@@ -203,7 +191,9 @@ class TestMarketService:
 		await session.commit()
 		return data
 
-	async def test_to_asset_success(self, market_service, market_data_aapl):
+	async def test_to_asset_success(
+		self, market_service, market_data_aapl, sample_exchange
+	):
 		"""Тест: преобразование MarketData в MarketAsset"""
 		md = market_data_aapl[0]
 		result = await market_service._to_asset(md)
@@ -212,14 +202,16 @@ class TestMarketService:
 		assert result.id == md.id
 		assert result.ticker_id == md.ticker_id
 		assert result.symbol == "AAPL"
-		assert result.exchange == "NASDAQ"
+		assert result.exchange == sample_exchange.code
 		assert result.asset_type == "stock"
 		assert result.last_price == float(md.close)
 		assert result.volume == float(md.volume)
 		assert result.timestamp == md.timestamp
 		assert result.change_percent is not None
 
-	async def test_to_asset_without_exchange(self, market_service, ticker_btc):
+	async def test_to_asset_with_exchange(
+		self, market_service, ticker_btc, sample_exchange_binance
+	):
 		"""Тест: преобразование MarketData без биржи"""
 		md = MarketData(
 			ticker_id=ticker_btc.id,
@@ -238,7 +230,7 @@ class TestMarketService:
 		result = await market_service._to_asset(md)
 
 		assert result is not None
-		assert result.exchange is None
+		assert result.exchange is sample_exchange_binance.code
 		assert result.asset_type == "crypto"
 
 	async def test_to_asset_with_none_values(self, market_service, ticker_aapl):
@@ -504,7 +496,9 @@ class TestMarketService:
 		assert result.volume is None or isinstance(result.volume, float)
 		assert result.timestamp is not None
 
-	async def test_market_heatmap_item_model(self, market_service, market_data_aapl):
+	async def test_market_heatmap_item_model(
+		self, market_service, market_data_aapl, sample_exchange
+	):
 		"""Тест: модель MarketHeatmapItem корректно создается"""
 		md = market_data_aapl[0]
 		asset = await market_service._to_asset(md)
@@ -517,7 +511,7 @@ class TestMarketService:
 		)
 
 		assert heatmap_item.symbol == "AAPL"
-		assert heatmap_item.exchange == "NASDAQ"
+		assert heatmap_item.exchange == sample_exchange.code
 		assert heatmap_item.change_percent is not None
 
 	async def test_get_snapshot_without_tenant(self, market_service, market_data_mixed):

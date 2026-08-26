@@ -5,6 +5,7 @@ import pytest
 from uuid6 import uuid7
 
 from swingtraderai.api.repositories.market_quote_repository import MarketQuoteRepository
+from swingtraderai.db.models.market import Exchange, Ticker
 from swingtraderai.schemas.market_data import MarketQuoteSchema
 
 
@@ -74,7 +75,9 @@ class TestMarketQuoteRepository:
 		assert result[0].updated_at >= result[1].updated_at
 
 	@pytest.mark.asyncio
-	async def test_upsert_from_quote_insert(self, ticker):
+	async def test_upsert_from_quote_insert(
+		self, ticker: Ticker, sample_exchange: Exchange
+	):
 		tenant_id = uuid7()
 
 		quote = MarketQuoteSchema(
@@ -82,18 +85,23 @@ class TestMarketQuoteRepository:
 			price=200.0,
 			change_percent=5.0,
 			volume=2000,
-			market_type="stock",
+			exchange_code=sample_exchange.code,
 			updated_at=datetime.now(timezone.utc),
 		)
 
-		result = await self.repo.upsert_from_quote(tenant_id, quote)
+		result = await self.repo.upsert_from_quote(tenant_id, ticker.id, quote)
 
 		assert result is not None
 		assert result.ticker_id == ticker.id
 		assert result.price == Decimal(str(quote.price))
 
 	@pytest.mark.asyncio
-	async def test_upsert_from_quote_update(self, ticker, market_quote_factory):
+	async def test_upsert_from_quote_update(
+		self,
+		ticker: Ticker,
+		market_quote_factory,
+		sample_exchange: Exchange,
+	):
 		tenant_id = uuid7()
 
 		existing = market_quote_factory(
@@ -112,31 +120,14 @@ class TestMarketQuoteRepository:
 			price=200.0,
 			change_percent=5.0,
 			volume=2000,
-			market_type="stock",
+			exchange_code=sample_exchange.code,
 			updated_at=datetime.now(timezone.utc),
 		)
 
-		result = await self.repo.upsert_from_quote(tenant_id, quote)
+		result = await self.repo.upsert_from_quote(tenant_id, ticker.id, quote)
 
 		assert result.price == Decimal("200")
 		assert result.volume == Decimal("2000")
-
-	@pytest.mark.asyncio
-	async def test_upsert_from_quote_no_ticker(self):
-		tenant_id = uuid7()
-
-		quote = MarketQuoteSchema(
-			symbol="UNKNOWN",
-			price=100,
-			change_percent=1,
-			volume=100,
-			market_type="stock",
-			updated_at=datetime.now(timezone.utc),
-		)
-
-		result = await self.repo.upsert_from_quote(tenant_id, quote)
-
-		assert result is None
 
 	@pytest.mark.asyncio
 	async def test_list_recent(self, ticker, sample_ticker, market_quote_factory):

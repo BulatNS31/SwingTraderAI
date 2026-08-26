@@ -2,6 +2,8 @@ from .analytics import activity_df, registration_dict, registrations, sample_ohl
 from .database import engine, session
 from .market import (
 	sample_exchange,
+	sample_exchange_binance,
+	sample_exchange_moex,
 	sample_market_data,
 	sample_ticker,
 	ticker,
@@ -31,6 +33,8 @@ __all__ = [
 	"watchlist",
 	"watchlist_service",
 	"sample_market_data",
+	"sample_exchange_moex",
+	"sample_exchange_binance",
 	"user",
 	"other_user",
 	"registrations",

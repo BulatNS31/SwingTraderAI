@@ -5,6 +5,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid6 import uuid7
 
 from swingtraderai.db.models.analysis import Analysis, Signal
 from swingtraderai.db.models.market import Exchange, Ticker
@@ -66,13 +67,8 @@ async def test_analysis_creation_and_defaults(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_analysis_minimal_creation(session: AsyncSession):
+async def test_analysis_minimal_creation(session: AsyncSession, ticker: Ticker):
 	"""Минимальный анализ — проверка nullable полей"""
-	ticker = Ticker(symbol="TESTCOIN", asset_type="crypto")
-	session.add(ticker)
-	await session.commit()
-	await session.refresh(ticker)
-
 	analysis = Analysis(ticker_id=ticker.id)
 	session.add(analysis)
 	await session.commit()
@@ -88,13 +84,10 @@ async def test_analysis_minimal_creation(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_signal_creation_and_numeric_fields(session: AsyncSession):
+async def test_signal_creation_and_numeric_fields(
+	session: AsyncSession, ticker: Ticker
+):
 	"""Создание сигнала + проверка Decimal полей"""
-	ticker = Ticker(symbol="SOLUSDT", asset_type="crypto")
-	session.add(ticker)
-	await session.commit()
-	await session.refresh(ticker)
-
 	analysis = Analysis(ticker_id=ticker.id, timeframe="1h", trend="bearish")
 	session.add(analysis)
 	await session.commit()
@@ -130,12 +123,7 @@ async def test_signal_creation_and_numeric_fields(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_signal_minimal_and_nullables(session: AsyncSession):
-	ticker = Ticker(symbol="MINIMAL", asset_type="stock")
-	session.add(ticker)
-	await session.commit()
-	await session.refresh(ticker)
-
+async def test_signal_minimal_and_nullables(session: AsyncSession, ticker: Ticker):
 	analysis = Analysis(ticker_id=ticker.id)
 	session.add(analysis)
 	await session.commit()
@@ -168,14 +156,9 @@ async def test_foreign_key_violation_analysis(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_foreign_key_violation_signal(session: AsyncSession):
+async def test_foreign_key_violation_signal(session: AsyncSession, ticker: Ticker):
 	"""Попытка создать Signal с несуществующим analysis_id"""
-	ticker = Ticker(symbol="FAKE", asset_type="crypto")
-	session.add(ticker)
-	await session.commit()
-	await session.refresh(ticker)
-
-	fake_analysis_id = uuid.uuid4()
+	fake_analysis_id = uuid7()
 
 	signal = Signal(
 		analysis_id=fake_analysis_id, ticker_id=ticker.id, signal_type="LONG"

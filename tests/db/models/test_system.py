@@ -8,15 +8,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from swingtraderai.db.models.analysis import Analysis, Signal
-from swingtraderai.db.models.market import Ticker
+from swingtraderai.db.models.market import Exchange, Ticker
 from swingtraderai.db.models.system import Notification, Watchlist, WatchlistItem
 from swingtraderai.db.models.user import User
 
 
 @pytest.mark.asyncio
-async def test_notification_creation_and_defaults(session: AsyncSession):
+async def test_notification_creation_and_defaults(
+	session: AsyncSession, sample_exchange: Exchange
+):
 	"""Проверка создания Notification + дефолтные значения"""
-	ticker = Ticker(symbol="BNBUSDT", asset_type="CRYPTO")
+	ticker = Ticker(
+		symbol="TEST",
+		asset_type="crypto",
+		exchange_id=sample_exchange.id,
+		base_currency="TEST",
+		quote_currency="USD",
+		is_active=True,
+	)
 	session.add(ticker)
 	await session.commit()
 	await session.refresh(ticker)
@@ -52,9 +61,18 @@ async def test_notification_creation_and_defaults(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_notification_minimal_creation(session: AsyncSession):
+async def test_notification_minimal_creation(
+	session: AsyncSession, sample_exchange: Exchange
+):
 	"""Минимальное уведомление — проверка nullable полей"""
-	ticker = Ticker(symbol="TEST", asset_type="CRYPTO")
+	ticker = Ticker(
+		symbol="TEST",
+		asset_type="crypto",
+		exchange_id=sample_exchange.id,
+		base_currency="TEST",
+		quote_currency="USD",
+		is_active=True,
+	)
 	session.add(ticker)
 	await session.commit()
 	await session.refresh(ticker)
@@ -94,7 +112,9 @@ async def test_foreign_key_violation_notification(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_watchlist_and_items_cascade(session: AsyncSession):
+async def test_watchlist_and_items_cascade(
+	session: AsyncSession, sample_exchange: Exchange
+):
 	"""Тест каскадного удаления + загрузки relationship"""
 	user = User(
 		username="watchlist_user2",
@@ -105,8 +125,23 @@ async def test_watchlist_and_items_cascade(session: AsyncSession):
 	await session.commit()
 	await session.refresh(user)
 
-	t1 = Ticker(symbol="BTCUSDT", asset_type="crypto")
-	t2 = Ticker(symbol="ETHUSDT", asset_type="crypto")
+	t1 = Ticker(
+		symbol="BTCUSDT",
+		asset_type="crypto",
+		exchange_id=sample_exchange.id,
+		base_currency="BTC",
+		quote_currency="USDT",
+		is_active=True,
+	)
+
+	t2 = Ticker(
+		symbol="ETHUSDT",
+		asset_type="crypto",
+		exchange_id=sample_exchange.id,
+		base_currency="ETH",
+		quote_currency="USDT",
+		is_active=True,
+	)
 	session.add_all([t1, t2])
 	await session.flush()
 
@@ -119,7 +154,6 @@ async def test_watchlist_and_items_cascade(session: AsyncSession):
 	session.add_all([item1, item2])
 	await session.commit()
 
-	# === Проверка eager loading ===
 	stmt = (
 		select(Watchlist)
 		.options(selectinload(Watchlist.items))
@@ -142,7 +176,9 @@ async def test_watchlist_and_items_cascade(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_watchlist_item_relationship(session: AsyncSession):
+async def test_watchlist_item_relationship(
+	session: AsyncSession, sample_exchange: Exchange
+):
 	"""Проверка двусторонней связи"""
 	user = User(
 		username="watchlist_user",
@@ -153,7 +189,14 @@ async def test_watchlist_item_relationship(session: AsyncSession):
 	await session.commit()
 	await session.refresh(user)
 
-	ticker = Ticker(symbol="SOLUSDT", asset_type="crypto")
+	ticker = Ticker(
+		symbol="SOLUSDT",
+		asset_type="crypto",
+		exchange_id=sample_exchange.id,
+		base_currency="SOL",
+		quote_currency="USDT",
+		is_active=True,
+	)
 	session.add(ticker)
 	await session.flush()
 
@@ -188,8 +231,10 @@ async def test_watchlist_item_relationship(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_watchlist_item_unique_per_watchlist_not_enforced(session: AsyncSession):
-	"""Проверяем, что сейчас дубли тикеров в одном watchlist разрешены"""
+async def test_watchlist_item_unique_per_watchlist_not_enforced(
+	session: AsyncSession,
+	sample_exchange: Exchange,
+):
 	user = User(
 		username="dup_user",
 		email="dup@example.com",
@@ -199,7 +244,14 @@ async def test_watchlist_item_unique_per_watchlist_not_enforced(session: AsyncSe
 	await session.commit()
 	await session.refresh(user)
 
-	ticker = Ticker(symbol="XLMUSDT", asset_type="crypto")
+	ticker = Ticker(
+		symbol="XLMUSDT",
+		asset_type="crypto",
+		exchange_id=sample_exchange.id,
+		base_currency="XLM",
+		quote_currency="USDT",
+		is_active=True,
+	)
 	session.add(ticker)
 	await session.flush()
 

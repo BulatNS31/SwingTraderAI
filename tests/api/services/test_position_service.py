@@ -3,10 +3,11 @@ from decimal import Decimal
 
 import pytest
 from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
 
 from swingtraderai.api.services.position_service import PositionService
-from swingtraderai.db.models.market import Ticker
+from swingtraderai.db.models.market import Exchange, Ticker
 from swingtraderai.schemas.user import PositionCreate, PositionUpdate
 
 
@@ -16,11 +17,12 @@ async def position_service(session):
 
 
 @pytest.fixture
-async def ticker_aapl(session):
+async def ticker_aapl(session: AsyncSession, sample_exchange: Exchange):
 	ticker = Ticker(
 		symbol="AAPL",
 		asset_type="stock",
 		base_currency="USD",
+		exchange_id=sample_exchange.id,
 		quote_currency="USD",
 		is_active=True,
 	)
@@ -31,12 +33,13 @@ async def ticker_aapl(session):
 
 
 @pytest.fixture
-async def ticker_btc(session):
+async def ticker_btc(session: AsyncSession, sample_exchange: Exchange):
 	ticker = Ticker(
 		symbol="BTCUSDT",
 		asset_type="crypto",
 		base_currency="BTC",
 		quote_currency="USD",
+		exchange_id=sample_exchange.id,
 		is_active=True,
 	)
 	session.add(ticker)
@@ -71,7 +74,7 @@ async def test_add_position_success(position_service, user, ticker_aapl):
 
 async def test_add_position_ticker_not_found(position_service, user):
 	position_in = PositionCreate(
-		ticker_id=uuid7(),  # несуществующий
+		ticker_id=uuid7(),
 		position_type="long",
 		quantity=Decimal("1"),
 		average_entry_price=Decimal("100"),

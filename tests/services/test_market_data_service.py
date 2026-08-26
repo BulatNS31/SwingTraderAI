@@ -19,11 +19,15 @@ def test_market_quote_schema_validation():
 	q = MarketQuoteSchema(
 		symbol="AAPL",
 		price=Decimal("123.45"),
-		change_percent=Decimal("1.23"),
-		volume=Decimal("1000.0"),
-		market_type="us",
+		change_percent=1.23,
+		volume=1000.0,
+		exchange_code="NASDAQ",
 		updated_at=datetime.now(timezone.utc),
 	)
+
 	assert q.symbol == "AAPL"
 	assert q.price == Decimal("123.45")
+	assert q.change_percent == 1.23
+	assert q.volume == 1000.0
+	assert q.exchange_code == "NASDAQ"
 	assert isinstance(q.updated_at, datetime)
