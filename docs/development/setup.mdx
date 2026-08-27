@@ -1,28 +1,78 @@
 ---
-title: "Setup"
-description: "Локальная разработка: dependencies, versions, and environment"
+title: "Настройка"
+description: "Настройка SwingTraderAI для локальной разработки с использованием Docker, backend и frontend"
 ---
 
-# Setup — локальная разработка
+# Локальная настройка
 
-## Требования
+Для запуска SwingTraderAI используется Python backend и отдельное React-приложение.
 
-- Python 3.12 — 3.14 (`pyproject.toml`)
-- Node.js (проверьте версию в `frontend/package.json`)
-- Poetry (если используете)
-- Docker & Docker Compose (опционально, для Postgres/Redis)
+Для разработки рекомендуется использовать **Docker Compose**, который поднимает необходимые сервисы проекта: API, базу данных PostgreSQL, Redis и фоновые workers.
 
-## Пример команд (подтверждено README)
+## Что необходимо установить
+
+Для работы с проектом понадобятся:
+
+- Python 3.12–3.14
+- Poetry
+- Node.js
+- Yarn
+- Docker
+- Docker Compose
+
+Версия Python и основные зависимости проекта определены в `pyproject.toml`.
+
+## Запуск проекта через Docker Compose
+
+Основной способ запуска проекта для разработки:
 
 ```bash
-# Установить зависимости (poetry)
-poetry install
+docker-compose up
+````
 
-# Запустить backend
-uvicorn swingtraderai.main:app --reload
+Docker Compose автоматически использует основной `docker-compose.yml` и файл переопределений, если он присутствует в проекте.
+
+После запуска будут подняты необходимые сервисы, включая:
+
+* `api` — FastAPI backend;
+* `worker` — фоновые задачи;
+* `postgres` — PostgreSQL;
+* `redis` — Redis;
+* `ml-worker` — задачи, связанные с ML.
+
+Это наиболее удобный вариант, поскольку не требуется вручную запускать каждый компонент системы.
+
+## Запуск для разработки
+
+Используйте:
+
+```bash
+docker-compose up
 ```
 
-## Frontend
+Docker соберет необходимые контейнеры и запустит проект.
+
+После успешного запуска backend будет доступен на:
+
+```text
+http://localhost:8000
+```
+
+Документация FastAPI:
+
+```text
+http://localhost:8000/docs
+```
+
+## Запуск frontend
+
+Frontend является отдельным React-приложением и находится в:
+
+```text
+frontend/
+```
+
+Для локальной разработки frontend можно запустить отдельно:
 
 ```bash
 cd frontend
@@ -30,10 +80,189 @@ yarn install
 yarn dev
 ```
 
-## Docker
+Проект использует Vite. Конкретный порт определяется конфигурацией Vite.
 
-`docker-compose.yml` содержит сервисы для api, worker, postgres, redis, ml-worker — используйте для локального тестирования с Docker.
+## Переменные окружения
 
-## TODO
+Backend получает настройки из файла:
 
-- Добавить точные версии Node/Python.
+```text
+.env
+```
+
+Конфигурация обрабатывается через `pydantic-settings` в:
+
+```text
+swingtraderai/core/config.py
+```
+
+Перед запуском проекта необходимо создать `.env` и указать необходимые параметры, например:
+
+```env
+SECRET_KEY=replace-with-a-long-secret
+ALGORITHM=HS256
+DATABASE_URL=postgresql+asyncpg://user:password@postgres:5432/swingtrader
+REDIS_URL=redis://redis:6379/0
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+CORS_ALLOWED_ORIGINS=["http://localhost:5173"]
+```
+
+При запуске внутри Docker важно использовать имена сервисов Docker Compose, например `postgres` и `redis`, а не `localhost`.
+
+## База данных
+
+В проекте используется **PostgreSQL**.
+
+Схема базы данных управляется через SQLAlchemy и Alembic.
+
+Для применения миграций:
+
+```bash
+alembic upgrade head
+```
+
+При этом в `swingtraderai/main.py` также присутствует создание таблиц через:
+
+```python
+Base.metadata.create_all
+```
+
+Поэтому в проекте существуют два механизма работы со схемой:
+
+* автоматическое создание таблиц при запуске;
+* миграции через Alembic.
+
+Для управляемого изменения структуры базы данных предпочтительно использовать Alembic.
+
+## Redis
+
+**Redis** используется проектом для инфраструктурных задач и взаимодействия с фоновыми процессами.
+
+В Docker Compose Redis запускается как отдельный сервис:
+
+```text
+redis
+```
+
+Backend и worker могут обращаться к нему по имени Docker-сервиса.
+
+## Фоновые задачи
+
+Для выполнения фоновых задач используется **Celery**.
+
+В Docker Compose предусмотрены:
+
+```text
+worker
+ml-worker
+```
+
+Они предназначены для выполнения задач, которые не должны выполняться непосредственно внутри HTTP-запроса.
+
+Например, это может включать:
+
+* загрузку рыночных данных;
+* обработку данных;
+* фоновые вычисления;
+* ML-задачи.
+
+## Режимы запуска Docker Compose
+
+Для проекта предусмотрено несколько вариантов запуска.
+
+### Разработка
+
+```bash
+docker-compose up
+```
+
+Используется для обычной локальной разработки.
+
+### Тестирование
+
+Для запуска тестового окружения:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up --abort-on-container-exit
+```
+
+В этом режиме используются отдельные настройки тестовой среды, а контейнеры завершаются после окончания тестов.
+
+### Production
+
+Для production-окружения:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+Этот режим запускает контейнеры в фоне и использует production-конфигурацию.
+
+## Рекомендуемый порядок запуска
+
+Для обычной разработки достаточно следующей последовательности:
+
+```bash
+git clone https://github.com/BulatNS31/SwingTraderAI.git
+cd SwingTraderAI
+
+docker-compose up
+```
+
+После запуска:
+
+1. Docker запускает PostgreSQL и Redis.
+2. Запускается FastAPI backend.
+3. Запускаются фоновые workers.
+4. Backend получает доступ к базе данных и Redis.
+5. Frontend можно запустить отдельно через Vite.
+
+Если frontend также необходимо запустить локально:
+
+```bash
+cd frontend
+yarn install
+yarn dev
+```
+
+## Что делает каждый компонент
+
+| Компонент   | Назначение                                                           |
+| ----------- | -------------------------------------------------------------------- |
+| `api`       | FastAPI backend и REST API                                           |
+| `postgres`  | Хранение пользователей, тикеров, рыночных данных и другой информации |
+| `redis`     | Очередь/хранилище для фоновых задач                                  |
+| `worker`    | Выполнение фоновых Celery-задач                                      |
+| `ml-worker` | Выполнение ML-связанных фоновых задач                                |
+| `frontend`  | React-интерфейс пользователя                                         |
+
+## Важное замечание
+
+Текущая Docker-конфигурация проекта требует дополнительного внимания.
+
+В `docker-compose.yml` сервис `ml-worker` ссылается на `rabbitmq`, однако отдельный сервис `rabbitmq` в текущем Compose-файле не определен.
+
+Поэтому Docker Compose следует рассматривать как **основной способ запуска проекта для разработки**, но текущую конфигурацию необходимо дополнительно проверить и при необходимости исправить перед использованием в production.
+
+## Кратко
+
+Если вам нужно просто запустить проект локально, основной сценарий выглядит так:
+
+```bash
+docker-compose up
+```
+
+Для frontend:
+
+```bash
+cd frontend
+yarn install
+yarn dev
+```
+
+Для миграций базы данных:
+
+```bash
+alembic upgrade head
+```

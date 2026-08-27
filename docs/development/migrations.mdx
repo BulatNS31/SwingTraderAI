@@ -1,17 +1,17 @@
 ---
-title: "Migrations"
-description: "Как работать с Alembic в проекте"
+title: "Миграции"
+description: "Работа с миграциями базы данных с использованием Alembic"
 ---
 
-# Migrations
+# Миграции
 
-Alembic config находится в `alembic/` и `alembic.ini`.
+В репозитории предусмотрена поддержка миграций базы данных с помощью Alembic. Используйте Alembic при изменении моделей или структуры базы данных.
 
 ## Создание миграции
 
 ```bash
-alembic revision --autogenerate -m "message"
-```
+alembic revision --autogenerate -m "описание изменения"
+````
 
 ## Применение миграций
 
@@ -19,10 +19,15 @@ alembic revision --autogenerate -m "message"
 alembic upgrade head
 ```
 
-## Локальная работа
+## Важное требование
 
-Для локальной работы убедитесь, что `DATABASE_URL` установлен и Alembic видит models (`env.py` должен импортировать `Base`).
+Переменная `DATABASE_URL` должна указывать на корректную базу данных, а окружение миграций должно импортировать SQLAlchemy metadata из моделей приложения.
 
-## TODO
+## Рекомендации по работе
 
-- Уточнить правила для ревизии моделей и автогенерации (проверьте `alembic/env.py`).
+Перед тем как считать изменения схемы завершёнными, убедитесь, что сгенерированная миграция соответствует предполагаемым изменениям моделей и что приложение успешно запускается с обновлённой базой данных.
+
+## Ссылки на исходный код
+
+* [Конфигурация Alembic](https://github.com/BulatNS31/SwingTraderAI/tree/main/alembic)
+* [Модели базы данных](https://github.com/BulatNS31/SwingTraderAI/tree/main/swingtraderai/db/models)

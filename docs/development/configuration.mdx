@@ -1,28 +1,49 @@
 ---
-title: "Configuration"
-description: "Перечень environment variables и конфигураций"
+title: "Конфигурация"
+description: "Фактические переменные окружения, используемые кодом приложения"
 ---
 
-# Configuration / Environment variables
+# Конфигурация
 
-Ниже — найденные в коде переменные конфигурации (основываясь на `swingtraderai/core/config.py` и README). Не включаю секреты.
+Приложение считывает конфигурацию из файла `.env` с помощью `pydantic-settings`, используя `swingtraderai/core/config.py`.
 
-| Variable                      | Required | Description                  | Default      |
-|-------------------------------|----------|------------------------------|--------------|
-| `SECRET_KEY`                  | yes      | JWT and other secrets        | (no default) |
-| `ALGORITHM`                   | yes      | JWT algorithm                | (no default) |
-| `DATABASE_URL`                | yes      | SQLAlchemy database URL      | (no default) |
-| `REDIS_URL`                   | yes      | Redis connection string      | (no default) |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | no       | Access token expiry          | 30           |
-| `REFRESH_TOKEN_EXPIRE_DAYS`   | no       | Refresh token expiry         | 7            |
-| `CORS_ALLOWED_ORIGINS`        | no       | List of allowed origins      | `[]`         |
+## Обязательные настройки
 
-README also mentions:
+| Переменная | Обязательная | Значение по умолчанию | Назначение | Где используется |
+| --- | --- | --- | --- | --- |
+| `SECRET_KEY` | Да | отсутствует | Ключ для подписи JWT | `core/security.py` |
+| `ALGORITHM` | Да | отсутствует | Алгоритм JWT | `core/security.py` |
+| `DATABASE_URL` | Да | отсутствует | Строка асинхронного подключения к PostgreSQL | `db/session.py` |
+| `REDIS_URL` | Да | отсутствует | Redis и брокер/backend Celery | `celery.py` |
 
-- `TELEGRAM_BOT_TOKEN`
-- `ANTHROPIC_API_KEY` (example)
-- LLM provider keys (`OPENAI_API_KEY` etc.)
+## Необязательные настройки
 
-## TODO
+| Переменная | Обязательная | Значение по умолчанию | Назначение | Где используется |
+| --- | --- | --- | --- | --- |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Нет | `30` | Время жизни токена доступа | `core/config.py` |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | Нет | `7` | Время жизни токена обновления | `core/config.py` |
+| `CORS_ALLOWED_ORIGINS` | Нет | `[]` | Список разрешённых источников для CORS | `main.py` |
 
-- Поиск по репозиторию на все ENV и дополнение таблицы.
+## Примечания
+
+- В настоящее время в корне репозитория отсутствует файл `.env.example`.
+- Код не содержит прямой ссылки на токен Telegram-бота или внешний ключ LLM в runtime-конфигурации.
+- Некоторые примеры в README содержат переменные для Telegram или AI-провайдеров, однако фактический класс `Settings` в `swingtraderai/core/config.py` объявляет только переменные, указанные выше.
+
+## Пример
+
+```env
+SECRET_KEY=replace-with-a-long-secret
+ALGORITHM=HS256
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/swingtrader
+REDIS_URL=redis://localhost:6379/0
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+CORS_ALLOWED_ORIGINS=["http://localhost:5173"]
+````
+
+## Ссылки на исходный код
+
+* [Класс Settings](https://github.com/BulatNS31/SwingTraderAI/blob/main/swingtraderai/core/config.py)
+* [Утилиты безопасности JWT](https://github.com/BulatNS31/SwingTraderAI/blob/main/swingtraderai/core/security.py)
+* [Сессия базы данных](https://github.com/BulatNS31/SwingTraderAI/blob/main/swingtraderai/db/session.py)

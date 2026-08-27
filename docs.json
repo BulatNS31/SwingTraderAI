@@ -2,14 +2,14 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "SwingTraderAI",
+  "logo": {
+    "dark": "/docs/source/SwingTraderAI-logo.png",
+    "light": "/docs/source/SwingTraderAI-logo.png"
+  },
   "colors": {
     "primary": "#00A86B",
     "light": "#E8F5E9",
     "dark": "#1B5E20"
-  },
-  "logo": {
-    "dark": "/logo/dark.svg",
-    "light": "/logo/light.svg"
   },
   "topbarCtaButton": {
     "name": "GitHub",
@@ -38,6 +38,7 @@
           "docs/architecture/overview",
           "docs/architecture/system-architecture",
           "docs/architecture/data-flow",
+          "docs/architecture/trading-pipeline",
           "docs/architecture/backend",
           "docs/architecture/frontend",
           "docs/architecture/ai-layer",

@@ -1,18 +1,41 @@
 ---
-title: "User Interface"
-description: "Описание пользовательских страниц"
+title: "Пользовательский интерфейс"
+description: "Пользовательские страницы и навигация, реализованные во frontend"
 ---
 
-# User Interface
+# Пользовательский интерфейс
 
-## Существующие / ожидаемые страницы (подтверждено документацией и API)
+Frontend-приложение построено вокруг авторизованных экранов продукта, а не одной статической страницы.
 
-- **Authentication** (signup / login) — backend реализован в `api/v1/auth.py`
-- **Dashboard** — watchlist + latest signals (watchlist endpoints exist)
-- **Tickers** — поиск/создание тикеров (`tickers.py`)
-- **Watchlist** — `api/v1/watchlist.py`
-- **Settings** — profile / telegram connect (fields in User model)
+## Разделы, доступные через маршрутизацию
 
-## TODO
+Дерево маршрутов включает:
 
-- Добавить скриншоты, routes и примеры запросов/ответов.
+- страницы аутентификации;
+- главную панель управления (Dashboard);
+- страницы обзора рынка и аналитики;
+- список отслеживаемых инструментов (Watchlist);
+- страницы портфеля;
+- страницы с подробной информацией по тикерам;
+- административные разделы.
+
+## Связанные backend API
+
+Эти страницы взаимодействуют с backend через соответствующие API-маршруты, включая:
+
+- маршруты аутентификации;
+- маршруты работы с тикерами;
+- маршруты Watchlist;
+- маршруты портфеля и пользователей.
+
+## Статус реализации
+
+В рамках этой документации подтверждены общая архитектура пользовательского интерфейса и структура маршрутов.
+
+При этом не утверждается, что каждая страница и каждая функция полностью завершены в текущем состоянии репозитория.
+
+## Ссылки на исходный код
+
+- [Frontend router](https://github.com/BulatNS31/SwingTraderAI/blob/main/frontend/src/app/router.tsx)
+- [Auth API](https://github.com/BulatNS31/SwingTraderAI/blob/main/swingtraderai/api/v1/auth.py)
+- [Ticker API](https://github.com/BulatNS31/SwingTraderAI/blob/main/swingtraderai/api/v1/tickers.py)
