@@ -1,8 +1,8 @@
 ---
+title: "overview"
+---
 
-title: "Обзор архитектуры"
-description: "Архитектура репозитория: backend, база данных, аналитический слой и frontend"
--------------------------------------------------------------------------------------------
+---
 
 # Обзор архитектуры
 
@@ -14,26 +14,19 @@ description: "Архитектура репозитория: backend, база �
 
 ## Основные слои
 
-* **Frontend** — приложение на Vite + React + TypeScript, расположенное в `frontend/src/`.
-* **Backend** — FastAPI-приложение в `swingtraderai/main.py`.
-* **API-слой** — маршруты API в `swingtraderai/api/v1/`.
-* **Сервисный слой** — бизнес-логика и orchestration в `swingtraderai/api/services/`.
-* **Слой репозиториев** — доступ к базе данных в `swingtraderai/api/repositories/`.
-* **Слой данных** — SQLAlchemy-модели в `swingtraderai/db/models/` и асинхронная сессия в `swingtraderai/db/session.py`.
-* **Аналитический слой** — расчет индикаторов, формирование признаков, обучение и инференс ML-моделей в `swingtraderai/indicators/` и `swingtraderai/ml/`.
-* **Worker-слой** — фоновые задачи Celery в `swingtraderai/tasks/`, использующие Redis в качестве брокера и backend.
+\* **Frontend** — приложение на Vite \+ React \+ TypeScript, расположенное в `frontend/src/`. \* **Backend** — FastAPI-приложение в `swingtraderai/main.py`. \* **API-слой** — маршруты API в `swingtraderai/api/v1/`. \* **Сервисный слой** — бизнес-логика и orchestration в `swingtraderai/api/services/`. \* **Слой репозиториев** — доступ к базе данных в `swingtraderai/api/repositories/`. \* **Слой данных** — SQLAlchemy-модели в `swingtraderai/db/models/` и асинхронная сессия в `swingtraderai/db/session.py`. \* **Аналитический слой** — расчет индикаторов, формирование признаков, обучение и инференс ML-моделей в `swingtraderai/indicators/` и `swingtraderai/ml/`. \* **Worker-слой** — фоновые задачи Celery в `swingtraderai/tasks/`, использующие Redis в качестве брокера и backend.
 
 ## Ответственность компонентов
 
-| Слой         | Ответственность                                                            | Файлы                                 |
-| ------------ | -------------------------------------------------------------------------- | ------------------------------------- |
-| API          | Аутентификация, CRUD для тикеров, индикаторы, watchlist, рыночный snapshot | `swingtraderai/api/v1/*.py`           |
-| Services     | Бизнес-логика и координация работы с данными                               | `swingtraderai/api/services/*.py`     |
-| Repositories | Доступ к данным и выполнение запросов                                      | `swingtraderai/api/repositories/*.py` |
-| Database     | Схема базы данных, связи между сущностями, tenant-поля                     | `swingtraderai/db/models/*.py`        |
-| Indicators   | Определение метрик, расчет индикаторов и извлечение сигналов               | `swingtraderai/indicators/*.py`       |
-| ML           | Обучение моделей и получение прогнозов                                     | `swingtraderai/ml/*.py`               |
-| Tasks        | Загрузка рыночных данных и выполнение фоновых задач                        | `swingtraderai/tasks/*.py`            |
+| Слой | Ответственность | Файлы |
+| --- | --- | --- |
+| API | Аутентификация, CRUD для тикеров, индикаторы, watchlist, рыночный snapshot | `swingtraderai/api/v1/*.py` |
+| Services | Бизнес-логика и координация работы с данными | `swingtraderai/api/services/*.py` |
+| Repositories | Доступ к данным и выполнение запросов | `swingtraderai/api/repositories/*.py` |
+| Database | Схема базы данных, связи между сущностями, tenant-поля | `swingtraderai/db/models/*.py` |
+| Indicators | Определение метрик, расчет индикаторов и извлечение сигналов | `swingtraderai/indicators/*.py` |
+| ML | Обучение моделей и получение прогнозов | `swingtraderai/ml/*.py` |
+| Tasks | Загрузка рыночных данных и выполнение фоновых задач | `swingtraderai/tasks/*.py` |
 
 ## Аналитическая архитектура
 
@@ -84,14 +77,7 @@ flowchart TD
 
 В упрощенном виде последовательность выглядит так:
 
-1. Пользователь взаимодействует с frontend.
-2. Frontend отправляет запрос в FastAPI API.
-3. API-маршрут передает запрос в сервисный слой.
-4. Сервис выполняет необходимую бизнес-логику.
-5. Repository обращается к PostgreSQL.
-6. Результат возвращается через сервисный слой.
-7. FastAPI формирует API-ответ.
-8. Frontend отображает результат пользователю.
+1. Пользователь взаимодействует с frontend. 2. Frontend отправляет запрос в FastAPI API. 3. API-маршрут передает запрос в сервисный слой. 4. Сервис выполняет необходимую бизнес-логику. 5. Repository обращается к PostgreSQL. 6. Результат возвращается через сервисный слой. 7. FastAPI формирует API-ответ. 8. Frontend отображает результат пользователю.
 
 Для аналитических операций этот процесс может дополняться расчетом индикаторов, обработкой рыночных данных и обращением к ML-моделям.
 
@@ -107,12 +93,7 @@ swingtraderai/api/v1/
 
 Существующая реализация включает API для таких задач, как:
 
-* аутентификация;
-* работа с тикерами;
-* получение индикаторов;
-* управление watchlist;
-* получение рыночного snapshot;
-* работа с другими backend-сервисами.
+\* аутентификация; \* работа с тикерами; \* получение индикаторов; \* управление watchlist; \* получение рыночного snapshot; \* работа с другими backend-сервисами.
 
 FastAPI также предоставляет автоматически генерируемую OpenAPI-документацию.
 
@@ -173,21 +154,13 @@ swingtraderai/ml/
 
 В дальнейшем этот слой может расширяться за счет новых правил анализа:
 
-* ценовой структуры;
-* уровней поддержки и сопротивления;
-* объема;
-* импульса;
-* трендовых характеристик;
-* других признаков, используемых торговыми стратегиями.
+\* ценовой структуры; \* уровней поддержки и сопротивления; \* объема; \* импульса; \* трендовых характеристик; \* других признаков, используемых торговыми стратегиями.
 
 ### ML
 
 ML-слой отвечает за:
 
-* подготовку признаков;
-* обучение моделей;
-* сохранение обученных моделей;
-* выполнение прогнозов.
+\* подготовку признаков; \* обучение моделей; \* сохранение обученных моделей; \* выполнение прогнозов.
 
 В проекте используются библиотеки машинного обучения, включая `scikit-learn` и `XGBoost`.
 
@@ -229,23 +202,14 @@ Worker-архитектура предназначена для задач, ко
 
 В частности, текущая архитектура не должна позиционироваться как полноценный execution engine с:
 
-* прямым брокерским исполнением;
-* управлением реальными ордерами;
-* полным жизненным циклом торговой позиции;
-* централизованным production risk-management;
-* гарантированным автономным исполнением торговых стратегий.
+\* прямым брокерским исполнением; \* управлением реальными ордерами; \* полным жизненным циклом торговой позиции; \* централизованным production risk-management; \* гарантированным автономным исполнением торговых стратегий.
 
 Основная задача текущей архитектуры — **сбор и обработка рыночных данных, аналитика, генерация сигналов и предоставление результатов пользователю**.
 
 ## Архитектура системы
-<Image
-  src="../source/architecture.png"
-  alt="Архитектура системы"
-/>
+
+![Architecture](/.github/docs/architecture.png "Architecture")
 
 ## Source links
 
-* [FastAPI-приложение](https://github.com/BulatNS31/SwingTraderAI/blob/main/swingtraderai/main.py)
-* [API-маршруты](https://github.com/BulatNS31/SwingTraderAI/tree/main/swingtraderai/api/v1)
-* [Модели базы данных](https://github.com/BulatNS31/SwingTraderAI/tree/main/swingtraderai/db/models)
-* [Frontend router](https://github.com/BulatNS31/SwingTraderAI/blob/main/frontend/src/app/router.tsx)
+\* [FastAPI-приложение](https://github.com/BulatNS31/SwingTraderAI/blob/main/swingtraderai/main.py) \* [API-маршруты](https://github.com/BulatNS31/SwingTraderAI/tree/main/swingtraderai/api/v1) \* [Модели базы данных](https://github.com/BulatNS31/SwingTraderAI/tree/main/swingtraderai/db/models) \* [Frontend router](https://github.com/BulatNS31/SwingTraderAI/blob/main/frontend/src/app/router.tsx)
