@@ -1,12 +1,12 @@
 ---
+title: "frontend"
+---
 
-title: "Frontend"
-description: "Архитектура frontend-приложения и его взаимодействие с backend"
------------------------------------------------------------------------------
+---
 
 # Архитектура frontend
 
-Frontend **SwingTraderAI** представляет собой отдельное приложение на базе **Vite + React + TypeScript**, расположенное в директории:
+Frontend **SwingTraderAI** представляет собой отдельное приложение на базе **Vite \+ React \+ TypeScript**, расположенное в директории:
 
 ```text
 frontend/
@@ -34,10 +34,7 @@ frontend/src/app/
 
 Содержит основную конфигурацию приложения:
 
-* инициализацию приложения;
-* маршрутизацию;
-* глобальную структуру frontend;
-* конфигурацию основных компонентов приложения.
+\* инициализацию приложения; \* маршрутизацию; \* глобальную структуру frontend; \* конфигурацию основных компонентов приложения.
 
 Центральная конфигурация маршрутов находится в:
 
@@ -55,12 +52,7 @@ frontend/src/features/
 
 В текущей структуре представлены компоненты, связанные с:
 
-* аутентификацией;
-* watchlist;
-* рынками;
-* аналитикой;
-* административными функциями;
-* другими пользовательскими возможностями.
+\* аутентификацией; \* watchlist; \* рынками; \* аналитикой; \* административными функциями; \* другими пользовательскими возможностями.
 
 Такое разделение позволяет изолировать логику отдельных функций и не превращать frontend в один гигантский файл, который через пару месяцев начинает напоминать археологический слой.
 
@@ -74,10 +66,7 @@ frontend/src/shared/
 
 В частности:
 
-* API-клиент;
-* общие утилиты;
-* переиспользуемую UI-логику;
-* общие frontend-компоненты.
+\* API-клиент; \* общие утилиты; \* переиспользуемую UI-логику; \* общие frontend-компоненты.
 
 Основной API-клиент находится в:
 
@@ -105,12 +94,7 @@ frontend/src/app/router.tsx
 
 Она включает маршруты для различных разделов приложения, в том числе:
 
-* страницы входа;
-* dashboard;
-* рынков;
-* аналитики;
-* торговых сигналов;
-* административных экранов.
+\* страницы входа; \* dashboard; \* рынков; \* аналитики; \* торговых сигналов; \* административных экранов.
 
 Упрощенная схема навигации:
 
@@ -289,25 +273,21 @@ flowchart TD
 
 Где:
 
-* **UI** отвечает за отображение;
-* **Pages** формируют страницы приложения;
-* **Features** содержат предметную логику отдельных функций;
-* **Shared** предоставляет общие инструменты;
-* **FastAPI Backend** является источником данных и серверной бизнес-логики.
+\* **UI** отвечает за отображение; \* **Pages** формируют страницы приложения; \* **Features** содержат предметную логику отдельных функций; \* **Shared** предоставляет общие инструменты; \* **FastAPI Backend** является источником данных и серверной бизнес-логики.
 
 ## Технологический стек
 
 Основные технологии frontend:
 
-| Компонент             | Технология |
-| --------------------- | ---------- |
-| UI framework          | React      |
-| Язык                  | TypeScript |
-| Сборщик               | Vite       |
-| Управление состоянием | Zustand    |
-| HTTP API              | Axios      |
-| Backend API           | FastAPI    |
-| API protocol          | REST       |
+| Компонент | Технология |
+| --- | --- |
+| UI framework | React |
+| Язык | TypeScript |
+| Сборщик | Vite |
+| Управление состоянием | Zustand |
+| HTTP API | Axios |
+| Backend API | FastAPI |
+| API protocol | REST |
 
 ## Состояние реализации
 
@@ -317,23 +297,12 @@ Frontend уже представляет собой полноценный по�
 
 Подтвержденными архитектурными характеристиками являются:
 
-* React + TypeScript;
-* Vite;
-* структура `app / features / shared / pages`;
-* централизованная маршрутизация;
-* Zustand для клиентского состояния;
-* централизованный API-клиент;
-* REST-взаимодействие с FastAPI backend.
+\* React \+ TypeScript; \* Vite; \* структура `app / features / shared / pages`; \* централизованная маршрутизация; \* Zustand для клиентского состояния; \* централизованный API-клиент; \* REST-взаимодействие с FastAPI backend.
 
 ## Frontend
-<Image
-  src="../source/frontend.svg"
-  alt="Архитектура системы"
-/>
+
+![Frontend](/.github/docs/frontend.svg "Frontend")
 
 ## Исходный код
 
-* [Frontend router](https://github.com/BulatNS31/SwingTraderAI/blob/main/frontend/src/app/router.tsx)
-* [Инициализация приложения](https://github.com/BulatNS31/SwingTraderAI/blob/main/frontend/src/App.tsx)
-* [Auth store](https://github.com/BulatNS31/SwingTraderAI/blob/main/frontend/src/features/auth/store/auth-store.ts)
-* [API-клиент](https://github.com/BulatNS31/SwingTraderAI/blob/main/frontend/src/shared/api/api-client.ts)
+\* [Frontend router](https://github.com/BulatNS31/SwingTraderAI/blob/main/frontend/src/app/router.tsx) \* [Инициализация приложения](https://github.com/BulatNS31/SwingTraderAI/blob/main/frontend/src/App.tsx) \* [Auth store](https://github.com/BulatNS31/SwingTraderAI/blob/main/frontend/src/features/auth/store/auth-store.ts) \* [API-клиент](https://github.com/BulatNS31/SwingTraderAI/blob/main/frontend/src/shared/api/api-client.ts)

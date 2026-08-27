@@ -1,8 +1,8 @@
 ---
+title: "multi-tenancy"
+---
 
-title: "Мультитенантность"
-description: "Архитектура tenant-модели SwingTraderAI и текущее состояние изоляции данных"
-------------------------------------------------------------------------------------------
+---
 
 # Мультитенантность
 
@@ -14,10 +14,7 @@ description: "Архитектура tenant-модели SwingTraderAI и тек
 
 В кодовой базе присутствуют компоненты, связанные с мультитенантностью:
 
-* `TenantBase` в `swingtraderai/db/base.py`;
-* tenant-ориентированная логика в `swingtraderai/core/tenant.py`;
-* ссылки на tenant-scoped подходы к работе с данными в моделях и repository-слое;
-* tenant-поля, включая `tenant_id`, в соответствующих моделях данных.
+\* `TenantBase` в `swingtraderai/db/base.py`; \* tenant-ориентированная логика в `swingtraderai/core/tenant.py`; \* ссылки на tenant-scoped подходы к работе с данными в моделях и repository-слое; \* tenant-поля, включая `tenant_id`, в соответствующих моделях данных.
 
 Это показывает, что архитектура проекта изначально проектировалась с учетом возможности разделения данных между tenant-контекстами.
 
@@ -65,7 +62,7 @@ TenantBase
 
 Упрощенная схема:
 
-```mermaid id="q8rj5v"
+```mermaid
 flowchart TD
     A[Сущность базы данных] --> B[TenantBase]
     B --> C[tenant_id]
@@ -86,7 +83,7 @@ swingtraderai/core/tenant.py
 
 Концептуальный поток выглядит следующим образом:
 
-```mermaid id="7f1b6p"
+```mermaid
 flowchart LR
     A[HTTP request] --> B[Аутентификация]
     B --> C[Определение tenant]
@@ -130,12 +127,7 @@ PostgreSQL
 
 В частности, в рамках текущего анализа не подтверждена централизованная гарантия tenant-scoping для каждого:
 
-* API endpoint;
-* repository;
-* database query;
-* service;
-* фоновой задачи;
-* административного сценария.
+\* API endpoint; \* repository; \* database query; \* service; \* фоновой задачи; \* административного сценария.
 
 Поэтому наличие `tenant_id` в модели само по себе нельзя считать доказательством полной изоляции данных.
 
@@ -143,7 +135,7 @@ PostgreSQL
 
 Для полноценной мультитенантной архитектуры необходимо контролировать несколько уровней:
 
-```mermaid id="y4a9bq"
+```mermaid
 flowchart TD
     A[Пользователь] --> B[Аутентификация]
     B --> C[Tenant Context]
@@ -179,23 +171,23 @@ Tenant data isolation
 
 ## Текущее состояние
 
-| Компонент                                        | Состояние                 |
-| ------------------------------------------------ | ------------------------- |
-| Tenant-абстракция                                | Реализована               |
-| `TenantBase`                                     | Реализован                |
-| `tenant_id` в моделях                            | Присутствует              |
-| Tenant utility logic                             | Присутствует              |
-| Tenant-aware repositories                        | Частично                  |
-| Централизованная tenant-изоляция API             | Не подтверждена полностью |
-| Изоляция всех DB queries                         | Не подтверждена           |
-| PostgreSQL Row-Level Security                    | Не подтверждена           |
-| Полностью изолированная production multi-tenancy | Не подтверждена           |
+| Компонент | Состояние |
+| --- | --- |
+| Tenant-абстракция | Реализована |
+| `TenantBase` | Реализован |
+| `tenant_id` в моделях | Присутствует |
+| Tenant utility logic | Присутствует |
+| Tenant-aware repositories | Частично |
+| Централизованная tenant-изоляция API | Не подтверждена полностью |
+| Изоляция всех DB queries | Не подтверждена |
+| PostgreSQL Row-Level Security | Не подтверждена |
+| Полностью изолированная production multi-tenancy | Не подтверждена |
 
 ## Практическая позиция
 
 Корректно описывать мультитенантность SwingTraderAI следующим образом:
 
-> **SwingTraderAI спроектирован с учетом мультитенантной модели и содержит соответствующие абстракции на уровне моделей, tenant-контекста и доступа к данным. При этом полная сквозная изоляция tenant на уровне всех API-маршрутов, запросов к базе данных и runtime-сценариев на текущем этапе не подтверждена.**
+\> **SwingTraderAI спроектирован с учетом мультитенантной модели и содержит соответствующие абстракции на уровне моделей, tenant-контекста и доступа к данным. При этом полная сквозная изоляция tenant на уровне всех API-маршрутов, запросов к базе данных и runtime-сценариев на текущем этапе не подтверждена.**
 
 Это означает, что мультитенантность является **частью архитектурного направления проекта**, но не должна позиционироваться как полностью завершенная production-функция без дополнительной валидации.
 
@@ -203,14 +195,7 @@ Tenant data isolation
 
 Для полноценной реализации мультитенантной архитектуры необходимо обеспечить:
 
-1. централизованное определение текущего tenant;
-2. обязательную передачу tenant-контекста в сервисный слой;
-3. автоматическое применение `tenant_id` в tenant-aware repositories;
-4. защиту от запросов с чужим `tenant_id`;
-5. тесты на межtenant-изоляцию;
-6. проверку фоновых Celery-задач;
-7. отдельную проверку административных endpoints;
-8. при необходимости, дополнительную защиту на уровне PostgreSQL через RLS.
+1. централизованное определение текущего tenant; 2. обязательную передачу tenant-контекста в сервисный слой; 3. автоматическое применение `tenant_id` в tenant-aware repositories; 4. защиту от запросов с чужим `tenant_id`; 5. тесты на межtenant-изоляцию; 6. проверку фоновых Celery-задач; 7. отдельную проверку административных endpoints; 8. при необходимости, дополнительную защиту на уровне PostgreSQL через RLS.
 
 Особенно важны автоматизированные тесты, проверяющие сценарий:
 
@@ -226,6 +211,4 @@ Tenant data isolation
 
 ## Исходный код
 
-* [DB Base](https://github.com/BulatNS31/SwingTraderAI/blob/main/swingtraderai/db/base.py)
-* [Tenant Core](https://github.com/BulatNS31/SwingTraderAI/blob/main/swingtraderai/core/tenant.py)
-* [Repositories](https://github.com/BulatNS31/SwingTraderAI/tree/main/swingtraderai/api/repositories)
+\* [DB Base](https://github.com/BulatNS31/SwingTraderAI/blob/main/swingtraderai/db/base.py) \* [Tenant Core](https://github.com/BulatNS31/SwingTraderAI/blob/main/swingtraderai/core/tenant.py) \* [Repositories](https://github.com/BulatNS31/SwingTraderAI/tree/main/swingtraderai/api/repositories)
