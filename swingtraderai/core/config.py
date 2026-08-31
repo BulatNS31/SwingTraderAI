@@ -13,8 +13,6 @@ class Settings(BaseSettings):
 	ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 	REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 	CORS_ALLOWED_ORIGINS: list[str] = []
-	KAGGLE_USERNAME: str
-	KAGGLE_KEY: str
 
 
 settings = Settings()
