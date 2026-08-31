@@ -75,7 +75,7 @@ Key Multi-Tenancy Features:
 
 1. **Clone & Install**
 ```bash
-git clone https://github.com/David2261/SwingTraderAI.git
+git clone https://github.com/BulatNS31/SwingTraderAI.git
 cd SwingTraderAI
 poetry install
 

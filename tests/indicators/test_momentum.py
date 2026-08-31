@@ -1,7 +1,7 @@
 import pandas as pd
 
 from swingtraderai.indicators.base import IndicatorResult
-from swingtraderai.indicators.momentum import (
+from swingtraderai.indicators.momentum.momentum import (
 	CCIIndicator,
 	MACDIndicator,
 	RSIIndicator,

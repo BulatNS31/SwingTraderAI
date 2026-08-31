@@ -62,6 +62,7 @@ class MarketDataSchema:
 	)
 	HIGH_COLUMN: str = "high"
 	LOW_COLUMN: str = "low"
+	OPEN_COLUMN: str = "open"
 	CLOSE_COLUMN: str = "close"
 	SQL_COLUMN_TYPES: Dict[str, str] = field(
 		default_factory=lambda: {

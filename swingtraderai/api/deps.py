@@ -6,11 +6,38 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from swingtraderai.api.services.analysis_service import AnalysisService
+from swingtraderai.api.services.indicator_service import IndicatorService
+from swingtraderai.api.services.setup_service import SetupService
+from swingtraderai.api.services.ticker_service import TickerService
 from swingtraderai.core.security import decode_token
 from swingtraderai.db.models.user import User, UserRole
 from swingtraderai.db.session import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+
+async def get_ticker_service(db: AsyncSession = Depends(get_db)) -> TickerService:
+	return TickerService(db)
+
+
+async def get_indicator_service(
+	ticker_service: TickerService = Depends(get_ticker_service),
+) -> IndicatorService:
+	return IndicatorService(ticker_service=ticker_service)
+
+
+async def get_setup_service(
+	ticker_service: TickerService = Depends(get_ticker_service),
+) -> SetupService:
+	return SetupService(ticker_service=ticker_service)
+
+
+async def get_analysis_service(
+	indicator_service: IndicatorService = Depends(get_indicator_service),
+	setup_service: SetupService = Depends(get_setup_service),
+) -> AnalysisService:
+	return AnalysisService(indicator_service, setup_service)
 
 
 async def get_current_user(
