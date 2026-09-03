@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Tuple
 
 import numpy as np
 import pandas as pd
@@ -9,18 +9,32 @@ from .base import BaseIndicator, IndicatorResult
 from .registry import registry
 
 
-def detect_fractal_highs_lows(df: pd.DataFrame, window: int = 2) -> pd.DataFrame:
-	"""Находит Fractal Highs и Lows (Bill Williams)"""
+def detect_fractal_highs_lows(
+	df: pd.DataFrame, window: int = 2
+) -> Tuple[pd.Series, pd.Series]:
+	"""Fractal High/Low (Bill Williams).
+
+	Фрактал — локальный экстремум: high/low строго максимален/минимален
+	среди window баров слева и window баров справа.
+
+	Args:
+	df: OHLCV DataFrame.
+	window: Число баров с каждой стороны (2 → окно из 5 баров).
+
+	Returns:
+	(fractal_high, fractal_low) — Series с ценой фрактала или NaN.
+	На последних window барах почти всегда NaN (нет правого контекста).
+	"""
 	df = MARKET_DATA_SCHEMA.normalize_columns(df)
 	high = df[MARKET_DATA_SCHEMA.HIGH_COLUMN]
 	low = df[MARKET_DATA_SCHEMA.LOW_COLUMN]
 
-	is_fractal_high = (
-		high == high.rolling(window * 2 + 1, center=True, min_periods=window + 1).max()
-	)
-	is_fractal_low = (
-		low == low.rolling(window * 2 + 1, center=True, min_periods=window + 1).min()
-	)
+	# center=True: текущий бар сравнивается с соседями слева и справа
+	roll_max = high.rolling(window * 2 + 1, center=True, min_periods=window + 1).max()
+	roll_min = low.rolling(window * 2 + 1, center=True, min_periods=window + 1).min()
+
+	is_fractal_high = high == roll_max
+	is_fractal_low = low == roll_min
 
 	return high.where(is_fractal_high), low.where(is_fractal_low)
 
@@ -31,81 +45,90 @@ def rolling_support_resistance_zones(
 	min_touches: int = 3,
 	price_tolerance: float = 0.003,
 ) -> pd.DataFrame:
-	"""Поиск горизонтальных уровней по количеству касаний"""
+	"""Горизонтальные S/R по частоте касаний в скользящем окне.
+
+	Цены кластеризуются в бины шириной ~price_tolerance от медианы.
+	Уровень = бин с наибольшим числом касаний (>= min_touches).
+
+	Args:
+	df: OHLCV.
+	window: Размер окна в барах.
+	min_touches: Минимум касаний, чтобы уровень считался значимым.
+	price_tolerance: Относительная ширина бина (0.003 = 0.3%).
+
+	Returns:
+	DataFrame: support_level, resistance_level,
+	touches_support, touches_resistance.
+	"""
 	df = MARKET_DATA_SCHEMA.normalize_columns(df)
+	n = len(df)
 
-	# Убеждаемся, что индекс - это range index
-	df = df.reset_index(drop=True)
+	support_level = np.full(n, np.nan)
+	resistance_level = np.full(n, np.nan)
+	touches_support = np.zeros(n, dtype=int)
+	touches_resistance = np.zeros(n, dtype=int)
 
-	supports = []
-	resistances = []
+	low_col = MARKET_DATA_SCHEMA.LOW_COLUMN
+	high_col = MARKET_DATA_SCHEMA.HIGH_COLUMN
 
-	for i in range(window, len(df)):
+	for i in range(window, n):
 		window_df = df.iloc[i - window : i]
 
-		# Support
-		lows = window_df[MARKET_DATA_SCHEMA.LOW_COLUMN]
+		# --- Support (кластер lows) ---
+		lows = window_df[low_col].to_numpy()
 		if len(lows) >= min_touches:
-			ref = lows.median()
-			bin_size = ref * price_tolerance
-			rounded = np.round(lows / bin_size) * bin_size
-			unique, counts = np.unique(rounded, return_counts=True)
+			ref = float(np.median(lows))
+			if ref > 0:
+				bin_size = ref * price_tolerance
+				rounded = np.round(lows / bin_size) * bin_size
+				unique, counts = np.unique(rounded, return_counts=True)
+				mask = counts >= min_touches
+				if mask.any():
+					idx = np.argmax(counts[mask])
+					support_level[i] = unique[mask][idx]
+					touches_support[i] = int(counts[mask][idx])
 
-			mask = counts >= min_touches
-			strong = unique[mask]
-			strong_counts = counts[mask]
-
-			if len(strong) > 0:
-				max_idx = np.argmax(strong_counts)
-				supports.append(strong[max_idx])
-			else:
-				supports.append(np.nan)
-		else:
-			supports.append(np.nan)
-
-		# Resistance
-		highs = window_df[MARKET_DATA_SCHEMA.HIGH_COLUMN]
+		# --- Resistance (кластер highs) ---
+		highs = window_df[high_col].to_numpy()
 		if len(highs) >= min_touches:
-			ref = highs.median()
-			bin_size = ref * price_tolerance
-			rounded = np.round(highs / bin_size) * bin_size
-			unique, counts = np.unique(rounded, return_counts=True)
+			ref = float(np.median(highs))
+			if ref > 0:
+				bin_size = ref * price_tolerance
+				rounded = np.round(highs / bin_size) * bin_size
+				unique, counts = np.unique(rounded, return_counts=True)
+				mask = counts >= min_touches
+				if mask.any():
+					idx = np.argmax(counts[mask])
+					resistance_level[i] = unique[mask][idx]
+					touches_resistance[i] = int(counts[mask][idx])
 
-			mask = counts >= min_touches
-			strong = unique[mask]
-			strong_counts = counts[mask]
-
-			if len(strong) > 0:
-				max_idx = np.argmax(strong_counts)
-				resistances.append(strong[max_idx])
-			else:
-				resistances.append(np.nan)
-		else:
-			resistances.append(np.nan)
-
-	# Создаём DataFrame с точным количеством строк
-	result_df = pd.DataFrame(index=df.index)
-
-	# Первые window строк - NaN
-	support_col = [np.nan] * window + supports
-	resistance_col = [np.nan] * window + resistances
-
-	# Обрезаем до нужной длины (на случай, если supports/resistances длиннее)
-	result_df["support_level"] = support_col[: len(df)]
-	result_df["resistance_level"] = resistance_col[: len(df)]
-
-	return result_df
+	return pd.DataFrame(
+		{
+			"support_level": support_level,
+			"resistance_level": resistance_level,
+			"touches_support": touches_support,
+			"touches_resistance": touches_resistance,
+		},
+		index=df.index,  # сохраняем исходный индекс
+	)
 
 
 def calculate_classic_pivot_points(
 	df: pd.DataFrame, timeframe: str = "D"
 ) -> pd.DataFrame:
-	"""Классические Pivot Points с выравниванием по времени"""
+	"""Классические Pivot Points с выравниванием по времени
+
+	Считаются на ресемпле (D/W), затем forward-fill на исходные бары.
+	Формулы: PP=(H+L+C)/3, R1=2*PP-L, S1=2*PP-H, R2=PP+(H-L), S2=PP-(H-L).
+	"""
 	df = MARKET_DATA_SCHEMA.normalize_columns(df)
 	temp = df.copy()
 
 	if "time" in temp.columns:
 		temp = temp.set_index("time")
+
+	if not isinstance(temp.index, pd.DatetimeIndex):
+		raise ValueError("Для pivot points нужен DatetimeIndex или колонка 'time'")
 
 	high, low, close = (
 		MARKET_DATA_SCHEMA.HIGH_COLUMN,
@@ -127,19 +150,16 @@ def calculate_classic_pivot_points(
 		index=daily.index,
 	)
 
+	# Растягиваем на исходный таймфрейм
 	result = pivot_df.reindex(temp.index, method="ffill")
 	result = result.reset_index(drop=True)
-
 	return result
 
 
 def add_key_levels_indicators(
 	df: pd.DataFrame, fractal_window: int = 2, sr_window: int = 100, pivot_tf: str = "D"
 ) -> pd.DataFrame:
-	"""
-	Главная функция — добавляет все уровневые индикаторы сразу.
-	Используется в feature engineering.
-	"""
+	"""Добавляет fractal / S-R / pivot колонки в df (feature engineering)."""
 	df = df.copy()
 
 	# Fractals
@@ -152,8 +172,12 @@ def add_key_levels_indicators(
 	df = pd.concat([df, zones], axis=1)
 
 	# Pivot Points
-	pivots = calculate_classic_pivot_points(df, timeframe=pivot_tf)
-	df = pd.concat([df, pivots], axis=1)
+	try:
+		pivots = calculate_classic_pivot_points(df, timeframe=pivot_tf)
+		df = pd.concat([df, pivots], axis=1)
+	except ValueError:
+		# нет datetime-индекса — пивоты пропускаем
+		pass
 
 	return df
 
@@ -166,31 +190,16 @@ class FractalIndicator(BaseIndicator):
 	def calculate(
 		self, df: pd.DataFrame, window: int = 2, **kwargs: Any
 	) -> IndicatorResult:
-		df = MARKET_DATA_SCHEMA.normalize_columns(df)
-
-		high = df[MARKET_DATA_SCHEMA.HIGH_COLUMN]
-		low = df[MARKET_DATA_SCHEMA.LOW_COLUMN]
-
-		# Fractal High
-		is_fractal_high = (
-			high
-			== high.rolling(window * 2 + 1, center=True, min_periods=window + 1).max()
-		)
-
-		# Fractal Low
-		is_fractal_low = (
-			low
-			== low.rolling(window * 2 + 1, center=True, min_periods=window + 1).min()
-		)
-
-		latest_high = high.where(is_fractal_high).iloc[-1]
-		latest_low = low.where(is_fractal_low).iloc[-1]
+		f_high, f_low = detect_fractal_highs_lows(df, window=window)
+		# Берём последний *подтверждённый* фрактал, не iloc[-1] (там часто NaN)
+		last_high = f_high.dropna().iloc[-1] if f_high.notna().any() else None
+		last_low = f_low.dropna().iloc[-1] if f_low.notna().any() else None
 
 		return IndicatorResult(
 			name=self.name,
 			value={
-				"fractal_high": float(latest_high) if pd.notna(latest_high) else None,
-				"fractal_low": float(latest_low) if pd.notna(latest_low) else None,
+				"fractal_high": float(last_high) if last_high is not None else None,
+				"fractal_low": float(last_low) if last_low is not None else None,
 			},
 			metadata={"window": window},
 		)
@@ -204,27 +213,26 @@ class SupportResistanceIndicator(BaseIndicator):
 	def calculate(
 		self, df: pd.DataFrame, window: int = 120, **kwargs: Any
 	) -> IndicatorResult:
-		from .utils import rolling_support_resistance_zones  # вынесем позже
-
 		zones = rolling_support_resistance_zones(
 			df, window=window, min_touches=3, price_tolerance=0.003
 		)
+		latest = zones.iloc[-1]
 
 		return IndicatorResult(
 			name=self.name,
 			value={
 				"support": (
-					float(zones["support_level"].iloc[-1])
-					if not pd.isna(zones["support_level"].iloc[-1])
+					float(latest["support_level"])
+					if pd.notna(latest["support_level"])
 					else None
 				),
 				"resistance": (
-					float(zones["resistance_level"].iloc[-1])
-					if not pd.isna(zones["resistance_level"].iloc[-1])
+					float(latest["resistance_level"])
+					if pd.notna(latest["resistance_level"])
 					else None
 				),
-				"touches_support": int(zones["touches_support"].iloc[-1]),
-				"touches_resistance": int(zones["touches_resistance"].iloc[-1]),
+				"touches_support": int(latest["touches_support"]),
+				"touches_resistance": int(latest["touches_resistance"]),
 			},
 			metadata={"window": window},
 		)
@@ -239,7 +247,6 @@ class PivotPointsIndicator(BaseIndicator):
 		self, df: pd.DataFrame, timeframe: str = "D", **kwargs: Any
 	) -> IndicatorResult:
 		pivots = calculate_classic_pivot_points(df, timeframe=timeframe)
-
 		latest = pivots.iloc[-1]
 
 		return IndicatorResult(

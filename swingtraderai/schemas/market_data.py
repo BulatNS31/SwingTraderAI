@@ -64,6 +64,7 @@ class MarketDataSchema:
 	LOW_COLUMN: str = "low"
 	OPEN_COLUMN: str = "open"
 	CLOSE_COLUMN: str = "close"
+	VOLUME_COLUMN: str = "volume"
 	SQL_COLUMN_TYPES: Dict[str, str] = field(
 		default_factory=lambda: {
 			"open": "DECIMAL",
@@ -114,6 +115,9 @@ class MarketDataSchema:
 	DROP_COLUMNS_FOR_TRAINING: Set[str] = field(
 		default_factory=lambda: {"target", "time", "future_return", "close"}
 	)
+
+	LONG_THRESHOLD: float = 0.65
+	SHORT_THRESHOLD = 0.35
 
 	@property
 	def all_columns(self) -> List[str]:

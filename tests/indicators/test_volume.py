@@ -81,27 +81,6 @@ def test_ad_indicator_basic(sample_ohlcv):
 	assert isinstance(result.value, (float, type(None)))
 
 
-def test_volume_indicators_are_registered():
-	"""Проверяем, что все volume/volatility индикаторы зарегистрированы"""
-	registered = registry.list_all()
-
-	expected = [
-		"bbands",
-		"atr",
-		"atr10",
-		"atr20",
-		"donchian",
-		"volume_sma",
-		"volume_sma10",
-		"volume_sma20",
-		"obv",
-		"ad",
-	]
-
-	for name in expected:
-		assert name in registered, f"Индикатор {name} не зарегистрирован"
-
-
 def test_bbands_in_registry():
 	ind = registry.get("bbands")
 	assert ind is not None

@@ -156,45 +156,39 @@ class RSIRegimeIndicator(BaseIndicator):
 	category = "price_action"
 	description = "RSI Market Regime (Overbought/Oversold)"
 
-	def calculate(self, df: pd.DataFrame, **kwargs: Any) -> IndicatorResult:
-		# Сначала считаем RSI
-		if df.empty or "close" not in df.columns or len(df) < 2:
+	def calculate(
+		self, df: pd.DataFrame, length: int = 14, **kwargs: Any
+	) -> IndicatorResult:
+		if df.empty or "close" not in df.columns or len(df) < length + 1:
 			return IndicatorResult(name=self.name, value=None)
 
-		returns = df["close"].pct_change() * 100
-
-		if returns.empty or returns.isna().all():
+		rsi = pdt.rsi(df["close"], length=length)
+		if rsi is None or rsi.empty:
 			return IndicatorResult(name=self.name, value=None)
 
-		latest_rsi = returns.iloc[-1]
-
-		if pd.isna(latest_rsi):
+		latest = rsi.iloc[-1]
+		if pd.isna(latest):
 			return IndicatorResult(name=self.name, value=None)
 
-		value = float(latest_rsi)
+		value = float(latest)
 
 		if value >= 70:
-			regime = "OVERBOUGHT"
-			signal = "bearish"
+			regime, signal = "OVERBOUGHT", "bearish"
 		elif value <= 30:
-			regime = "OVERSOLD"
-			signal = "bullish"
+			regime, signal = "OVERSOLD", "bullish"
 		elif value >= 60:
-			regime = "BULLISH"
-			signal = "bullish"
+			regime, signal = "BULLISH", "bullish"
 		elif value <= 40:
-			regime = "BEARISH"
-			signal = "bearish"
+			regime, signal = "BEARISH", "bearish"
 		else:
-			regime = "NEUTRAL"
-			signal = "neutral"
+			regime, signal = "NEUTRAL", "neutral"
 
 		return IndicatorResult(
 			name=self.name,
 			value=value,
 			signal=signal,
 			regime=regime,
-			metadata={"rsi_value": value},
+			metadata={"rsi_length": length, "rsi_value": value},
 		)
 
 

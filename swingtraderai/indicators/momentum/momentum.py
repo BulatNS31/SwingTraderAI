@@ -3,8 +3,8 @@ from typing import Any
 import pandas as pd
 import pandas_ta as pdt
 
-from ..base import BaseIndicator, IndicatorResult
-from ..registry import registry
+from swingtraderai.indicators.base import BaseIndicator, IndicatorResult
+from swingtraderai.indicators.registry import registry
 
 
 class RSIIndicator(BaseIndicator):

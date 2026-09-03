@@ -53,7 +53,12 @@ def test_rolling_support_resistance_zones(sample_ohlcv):
 	)
 
 	assert isinstance(result, pd.DataFrame)
-	assert list(result.columns) == ["support_level", "resistance_level"]
+	assert list(result.columns) == [
+		"support_level",
+		"resistance_level",
+		"touches_support",
+		"touches_resistance",
+	]
 	assert len(result) == len(sample_ohlcv)
 	assert result.index.equals(sample_ohlcv.index)
 

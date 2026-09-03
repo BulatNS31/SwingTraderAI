@@ -32,8 +32,6 @@ class IndicatorResult(BaseModel):
 
 
 class BaseIndicator(ABC):
-	"""Базовый класс для всех индикаторов"""
-
 	name: str
 	category: str
 	description: str = ""
@@ -43,9 +41,8 @@ class BaseIndicator(ABC):
 	def calculate(
 		self, df: pd.DataFrame, **kwargs: Any
 	) -> Union[IndicatorResult, pd.Series, Dict[str, Any]]:
-		"""Основной метод расчёта"""
+		"""Основной метод расчёта."""
 		pass
 
 	def interpret(self, value: Any, **kwargs: Any) -> Dict[str, Any]:
-		"""Интерпретация значения (bullish/bearish и т.д.)"""
 		return {"signal": "neutral", "regime": None}

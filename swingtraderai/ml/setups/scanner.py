@@ -54,7 +54,7 @@ class SetupScanner:
 			out["volume_ratio"] = out["volume"] / out["volume"].rolling(30).mean()
 
 		out = detect_strong_levels(out, min_tests=2, window=100)
-		out = detect_false_breakout(out, atr_mult=1.2)
+		out = detect_false_breakout(out, min_depth_atr=0.4)
 
 		if detect_bsu_bpu_levels is not None:
 			bsu = detect_bsu_bpu_levels(out)
