@@ -38,7 +38,7 @@ class PurgedTimeSeriesSplit(TimeSeriesSplit):
 		X: Any,
 		y: Any = None,
 		groups: Any = None,
-	) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+	) -> Generator[Tuple[NDArray[np.int64], NDArray[np.int64]], None, None]:
 		for train_idx, test_idx in super().split(X, y, groups):
 			if self.purge_size > 0 and len(train_idx) > self.purge_size:
 				train_idx = np.array(train_idx[: -self.purge_size])
