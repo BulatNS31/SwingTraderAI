@@ -77,6 +77,17 @@ exclude_lines = [
 	"if TYPE_CHECKING:"
 ]
 
+[tool.poetry.scripts]
+dev = "uvicorn swingtraderai.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug"
+bot = "python -m swingtraderai.bot"
+worker = "celery -A swingtraderai.tasks.celery_app worker --loglevel=debug --concurrency=1"
+beat = "celery -A swingtraderai.tasks.celery_app beat --loglevel=debug"
+test = "pytest -v --tb=short --cov=swingtraderai"
+format = "ruff format ."
+lint = "ruff check ."
+train = "python scripts/train_model.py"
+collect = "python scripts/collect_data.py"
+
 [tool.black]
 line-length = 88
 target-version = ['py312']
