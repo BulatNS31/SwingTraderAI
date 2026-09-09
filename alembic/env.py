@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from swingtraderai.core.config import settings
-from swingtraderai.db.base import Base
+from swingtraderai.db.models import Base
 
 config = context.config
 
