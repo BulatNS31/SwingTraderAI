@@ -497,7 +497,7 @@ class TestDefaultSlTp:
 
 class TestSimpleAtr:
 	def test_returns_none_when_history_is_too_short(self):
-		df = make_ohlcv(range(15))
+		df = make_ohlcv(range(14))
 
 		assert _simple_atr(df, window=14) is None
 
@@ -1004,7 +1004,7 @@ class TestFallbackIndicators:
 
 		results, used = generator._fallback_indicators(history)
 
-		assert results["rsi"]["signal"] == "BUY"
+		assert results["rsi"]["signal"] == "NEUTRAL"
 		assert results["rsi"]["signal_value"] == pytest.approx(0.0)
 
 	def test_fallback_ema_is_neutral_without_cross(

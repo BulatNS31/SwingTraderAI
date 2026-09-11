@@ -154,6 +154,7 @@ def _simple_atr(df: pd.DataFrame, window: int = 14) -> Optional[float]:
 	"""Lightweight ATR for SL/TP sizing when full indicator suite is unavailable."""
 	if len(df) < window + 1:
 		return None
+
 	high = df["high"].astype(float)
 	low = df["low"].astype(float)
 	close = df["close"].astype(float)
@@ -271,15 +272,25 @@ class SignalGenerator:
 			delta = close.diff()
 			gain = delta.clip(lower=0).rolling(14).mean()
 			loss = (-delta.clip(upper=0)).rolling(14).mean()
-			rs = gain / loss.replace(0, 1e-10)
-			rsi = 100 - (100 / (1 + rs))
-			last_rsi = float(rsi.iloc[-1])
-			if last_rsi < 30:
-				results["rsi"] = {"signal": "BUY", "signal_value": 1.0}
-			elif last_rsi > 70:
-				results["rsi"] = {"signal": "SELL", "signal_value": -1.0}
-			else:
+			last_gain = float(gain.iloc[-1])
+			last_loss = float(loss.iloc[-1])
+
+			if last_gain == 0.0 and last_loss == 0.0:
+				# Плоские цены — RSI не определён, трактуем как нейтральный
 				results["rsi"] = {"signal": "NEUTRAL", "signal_value": 0.0}
+			elif last_loss == 0.0:
+				results["rsi"] = {"signal": "SELL", "signal_value": -1.0}  # RSI = 100
+			elif last_gain == 0.0:
+				results["rsi"] = {"signal": "BUY", "signal_value": 1.0}  # RSI = 0
+			else:
+				rs = last_gain / last_loss
+				last_rsi = 100.0 - (100.0 / (1.0 + rs))
+				if last_rsi < 30:
+					results["rsi"] = {"signal": "BUY", "signal_value": 1.0}
+				elif last_rsi > 70:
+					results["rsi"] = {"signal": "SELL", "signal_value": -1.0}
+				else:
+					results["rsi"] = {"signal": "NEUTRAL", "signal_value": 0.0}
 			used.append("rsi")
 
 		if len(close) >= 21:
