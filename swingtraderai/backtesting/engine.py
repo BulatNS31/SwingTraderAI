@@ -19,20 +19,19 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional, cast
+from typing import Optional, cast
 
 import pandas as pd
 
-from .config import BacktestConfig, EntryMode
-from .models import (
-	BacktestMetrics,
+from swingtraderai.backtesting.config import BacktestConfig, EntryMode
+from swingtraderai.backtesting.metrics import calculate_metrics
+from swingtraderai.backtesting.models import (
 	BacktestResult,
 	EquityPoint,
 	Side,
-	Trade,
 )
-from .position_manager import PositionManager
-from .signal_generator import SignalGenerator
+from swingtraderai.backtesting.position_manager import PositionManager
+from swingtraderai.backtesting.signal_generator import SignalGenerator
 
 
 class BacktestEngine:
@@ -53,12 +52,12 @@ class BacktestEngine:
 		Parameters
 		----------
 		df : DataFrame
-		Must contain columns: time, open, high, low, close, volume
-		(case-insensitive). Must be sorted ascending by time.
+			Must contain columns: time, open, high, low, close, volume
+			(case-insensitive). Must be sorted ascending by time.
 		ticker, timeframe :
-		Labels stored on signals / trades.
-		start, end:
-		Optional time filters applied after warmup.
+			Labels stored on signals / trades.
+		start, end :
+			Optional time filters applied after warmup.
 		"""
 		df = self._prepare(df, start, end)
 		if len(df) <= self.config.warmup_bars:
@@ -97,10 +96,10 @@ class BacktestEngine:
 
 			# 4. Manage open position on this bar's OHLC
 			# closed = pm.update_on_bar(
-			# 	bar_open=open,
-			# 	bar_high=high,
-			# 	bar_low=low,
-			# 	bar_close=close,
+			# 	bar_open=o,
+			# 	bar_high=h,
+			# 	bar_low=l,
+			# 	bar_close=c,
 			# 	bar_time=bar_time,
 			# 	signal=signal,
 			# )
@@ -147,12 +146,19 @@ class BacktestEngine:
 				drawdown_pct=pm.current_drawdown_pct,
 			)
 
-		metrics = self._basic_metrics(pm.closed_trades, equity_curve)
+		start_ts = self._to_datetime(df.iloc[self.config.warmup_bars]["time"])
+		metrics = calculate_metrics(
+			trades=pm.closed_trades,
+			equity_curve=equity_curve,
+			initial_capital=self.config.initial_capital,
+			start=start_ts,
+			end=last_time,
+		)
 
 		return BacktestResult(
 			ticker=ticker,
 			timeframe=timeframe,
-			start=self._to_datetime(df.iloc[self.config.warmup_bars]["time"]),
+			start=start_ts,
 			end=last_time,
 			config=self.config,
 			trades=pm.closed_trades,
@@ -202,47 +208,3 @@ class BacktestEngine:
 			return cast(datetime, ts.to_pydatetime())
 
 		raise TypeError(f"Cannot convert {type(value).__name__} to datetime")
-
-	def _basic_metrics(
-		self, trades: List[Trade], equity_curve: List[EquityPoint]
-	) -> BacktestMetrics:
-		"""Minimal metrics for Phase 1. Full set arrives in Phase 2."""
-		m = BacktestMetrics()
-		m.total_trades = len(trades)
-		if not trades:
-			if equity_curve:
-				m.total_return = equity_curve[-1].equity - self.config.initial_capital
-				m.total_return_pct = (
-					m.total_return / self.config.initial_capital
-				) * 100.0
-			return m
-
-		pnls = [t.pnl for t in trades]
-		wins = [p for p in pnls if p > 0]
-		losses = [p for p in pnls if p <= 0]
-		m.winning_trades = len(wins)
-		m.losing_trades = len(losses)
-		m.win_rate = m.winning_trades / m.total_trades if m.total_trades else 0.0
-		m.loss_rate = 1.0 - m.win_rate
-		m.average_trade = sum(pnls) / m.total_trades
-		m.average_win = sum(wins) / len(wins) if wins else 0.0
-		m.average_loss = sum(losses) / len(losses) if losses else 0.0
-		m.largest_win = max(pnls)
-		m.largest_loss = min(pnls)
-		m.average_bars_held = sum(t.bars_held for t in trades) / m.total_trades
-		m.avg_mfe = sum(t.max_favorable_excursion for t in trades) / m.total_trades
-		m.avg_mae = sum(t.max_adverse_excursion for t in trades) / m.total_trades
-
-		gross_profit = sum(wins) if wins else 0.0
-		gross_loss = abs(sum(losses)) if losses else 0.0
-		m.profit_factor = gross_profit / gross_loss if gross_loss > 0 else None
-		m.expectancy = m.average_trade
-
-		if equity_curve:
-			final_eq = equity_curve[-1].equity
-			m.total_return = final_eq - self.config.initial_capital
-			m.total_return_pct = (m.total_return / self.config.initial_capital) * 100.0
-			m.max_drawdown = max(ep.drawdown for ep in equity_curve)
-			m.max_drawdown_pct = max(ep.drawdown_pct for ep in equity_curve)
-
-		return m

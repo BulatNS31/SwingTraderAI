@@ -1,34 +1,24 @@
-"""Position lifecycle: open, update, close.
-
-Phase 1 constraints:
-  - single position
-  - long only (short gated by config.allow_short)
-  - next-open entry is handled by the engine (pending order)
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
 from typing import List, Optional
 
+from swingtraderai.backtesting.config import (
+	BacktestConfig,
+	PositionSizingMode,
+)
+from swingtraderai.backtesting.execution import (
+	Fill,
+	check_stop_and_target,
+	create_entry_fill,
+	create_exit_fill,
+)
 from swingtraderai.backtesting.models import (
 	ExitReason,
 	Position,
 	Side,
 	Signal,
 	Trade,
-)
-
-from .config import (
-	BacktestConfig,
-	PositionSizingMode,
-)
-from .costs import commission_cost, slippage_cost
-from .execution import (
-	Fill,
-	check_stop_and_target,
-	create_entry_fill,
-	create_exit_fill,
 )
 
 
@@ -116,11 +106,13 @@ class PositionManager:
 			return None
 
 		fill = create_entry_fill(bar_open, qty, signal.side, self.config)
-		cost = fill.price * fill.quantity + fill.commission
-		if cost > self.cash:
+		# Capital check: both long and short require free cash ≥ notional + commission
+		# (full-margin model — simple and safe for MVP).
+		required = fill.price * fill.quantity + fill.commission
+		if required > self.cash:
 			return None
 
-		self.cash -= cost
+		self.cash -= required
 		self.position = Position(
 			side=signal.side,
 			quantity=fill.quantity,
@@ -133,7 +125,6 @@ class PositionManager:
 			max_adverse_price=fill.price,
 			signal=signal,
 			bars_held=0,
-			trailing_stop=None,
 		)
 		return fill
 
@@ -149,6 +140,7 @@ class PositionManager:
 		bar_close: float,
 		bar_time: datetime,
 		signal: Optional[Signal] = None,
+		atr: Optional[float] = None,
 	) -> Optional[Trade]:
 		"""Update open position: excursions, trailing, SL/TP, time exit.
 
@@ -161,11 +153,9 @@ class PositionManager:
 		pos.bars_held += 1
 		pos.update_excursions(bar_high, bar_low)
 
-		# Trailing stop update
-		if self.config.trailing_stop:
-			self._update_trailing(pos, bar_high, bar_low)
-
-		# SL / TP check
+		# 1) Exit checks use the *previous* trailing level.
+		#    Ratcheting trailing before the check would let a new stop
+		#    fire on the same bar that produced the new extreme.
 		exit_check = check_stop_and_target(
 			side=pos.side,
 			stop_loss=pos.stop_loss,
@@ -184,33 +174,60 @@ class PositionManager:
 				exit_check.reason or ExitReason.STOP_LOSS,
 			)
 
-		# Time-based exit
+		# 2) Time-based exit
 		if (
 			self.config.max_bars_in_trade is not None
 			and pos.bars_held >= self.config.max_bars_in_trade
 		):
 			return self._close(bar_close, bar_time, ExitReason.TIME_EXIT)
 
-		# Signal reverse exit (optional)
+		# 3) Signal reverse exit
 		if signal is not None and signal.side != Side.NEUTRAL:
 			if pos.side == Side.LONG and signal.side == Side.SHORT:
 				return self._close(bar_close, bar_time, ExitReason.SIGNAL_REVERSE)
 			if pos.side == Side.SHORT and signal.side == Side.LONG:
 				return self._close(bar_close, bar_time, ExitReason.SIGNAL_REVERSE)
 
+		# 4) Ratchet trailing for the *next* bar only
+		if self.config.trailing_stop:
+			self._update_trailing(pos, bar_high, bar_low, atr=atr)
+
 		return None
 
-	def _update_trailing(self, pos: Position, high: float, low: float) -> None:
+	def _update_trailing(
+		self,
+		pos: Position,
+		high: float,
+		low: float,
+		atr: Optional[float] = None,
+	) -> None:
+		"""Ratchet trailing stop. Supports pct and/or ATR multiple."""
 		cfg = self.config
+		candidates: List[float] = []
+
 		if cfg.trailing_stop_pct is not None:
 			if pos.side == Side.LONG:
-				candidate = high * (1.0 - cfg.trailing_stop_pct)
-				if pos.trailing_stop is None or candidate > pos.trailing_stop:
-					pos.trailing_stop = candidate
+				candidates.append(high * (1.0 - cfg.trailing_stop_pct))
 			elif pos.side == Side.SHORT:
-				candidate = low * (1.0 + cfg.trailing_stop_pct)
-				if pos.trailing_stop is None or candidate < pos.trailing_stop:
-					pos.trailing_stop = candidate
+				candidates.append(low * (1.0 + cfg.trailing_stop_pct))
+
+		if cfg.trailing_stop_atr_mult is not None and atr is not None and atr > 0:
+			if pos.side == Side.LONG:
+				candidates.append(high - atr * cfg.trailing_stop_atr_mult)
+			elif pos.side == Side.SHORT:
+				candidates.append(low + atr * cfg.trailing_stop_atr_mult)
+
+		if not candidates:
+			return
+
+		if pos.side == Side.LONG:
+			candidate = max(candidates)
+			if pos.trailing_stop is None or candidate > pos.trailing_stop:
+				pos.trailing_stop = candidate
+		elif pos.side == Side.SHORT:
+			candidate = min(candidates)
+			if pos.trailing_stop is None or candidate < pos.trailing_stop:
+				pos.trailing_stop = candidate
 
 	# ------------------------------------------------------------------
 	# Close helpers
@@ -223,40 +240,34 @@ class PositionManager:
 		pos = self.position
 		fill = create_exit_fill(raw_exit_price, pos.quantity, pos.side, self.config)
 
-		# Cash proceeds
-		if pos.side == Side.LONG:
-			proceeds = fill.price * fill.quantity - fill.commission
-			self.cash += proceeds
-			raw_pnl = (fill.price - pos.entry_price) * pos.quantity
-		else:
-			# Short: we received cash at entry; now buy back
-			proceeds = pos.entry_price * pos.quantity  # already added at entry logic
-			# For simplicity in Phase 1 we treat short PnL symmetrically
-			raw_pnl = (pos.entry_price - fill.price) * pos.quantity
-			self.cash += raw_pnl - fill.commission
+		from swingtraderai.backtesting.costs import commission_cost, slippage_cost
 
-		# total_commission = (
-		# 	fill.commission
-		# )  # entry commission already deducted from cash
-		# Re-compute entry commission for reporting
 		entry_notional = pos.entry_price * pos.quantity
-
 		entry_comm = commission_cost(entry_notional, self.config)
 		total_comm = entry_comm + fill.commission
 		total_slip = slippage_cost(entry_notional, self.config) + fill.slippage_amount
 
-		# net_pnl = raw_pnl - total_comm - (total_slip - fill.slippage_amount)
-		# Simpler accounting: pnl is price PnL, costs separate
-		pnl = raw_pnl
-		pnl_pct = (
-			(fill.price / pos.entry_price - 1.0)
-			if pos.side == Side.LONG
-			else (pos.entry_price / fill.price - 1.0)
-		)
-		if pos.side == Side.SHORT:
-			pnl_pct = (pos.entry_price - fill.price) / pos.entry_price
+		# Full-margin cash model:
+		#   entry: cash -= entry_notional + entry_comm
+		#   exit long:  cash += exit_notional - exit_comm
+		#   exit short: cash += entry_notional + (entry - exit)*qty - exit_comm
+		#             = cash += 2*entry_notional - exit_notional - exit_comm
+		#             which is equivalent to releasing reserve + applying PnL.
+		if pos.side == Side.LONG:
+			raw_pnl = (fill.price - pos.entry_price) * pos.quantity
+			self.cash += fill.price * fill.quantity - fill.commission
+			pnl_pct = (fill.price / pos.entry_price - 1.0) if pos.entry_price else 0.0
+		else:
+			raw_pnl = (pos.entry_price - fill.price) * pos.quantity
+			# Release reserved entry notional + price PnL − exit commission
+			self.cash += pos.entry_price * pos.quantity + raw_pnl - fill.commission
+			pnl_pct = (
+				(pos.entry_price - fill.price) / pos.entry_price
+				if pos.entry_price
+				else 0.0
+			)
 
-		# MFE / MAE in price units
+		# MFE / MAE in price units (always ≥ 0 when tracked correctly)
 		if pos.side == Side.LONG:
 			mfe = pos.max_favorable_price - pos.entry_price
 			mae = pos.entry_price - pos.max_adverse_price
@@ -276,7 +287,7 @@ class PositionManager:
 			stop_loss=pos.stop_loss,
 			take_profit=pos.take_profit,
 			position_size=pos.quantity,
-			pnl=pnl,
+			pnl=raw_pnl,
 			pnl_percent=pnl_pct * 100.0,
 			commission=total_comm,
 			slippage=total_slip,

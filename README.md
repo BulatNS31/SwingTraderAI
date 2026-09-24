@@ -105,9 +105,12 @@ alembic upgrade head
 uvicorn swingtraderai.main:app --reload # --port 7123
 
 python -m bots.telegram.bot
-
 ```
-
+- Also
+```bash
+poetry install
+poetry run poe dev
+```
 
 
 ---
