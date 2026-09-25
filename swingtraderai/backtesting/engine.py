@@ -135,7 +135,7 @@ class BacktestEngine:
 		last = df.iloc[-1]
 		last_time = self._to_datetime(last["time"])
 		pm.close_all(float(last["close"]), last_time)
-		# Final equity point already recorded; update last if needed
+		# Final equity point already recorded, update last if needed
 		if equity_curve:
 			equity_curve[-1] = EquityPoint(
 				time=last_time,

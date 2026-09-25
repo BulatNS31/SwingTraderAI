@@ -237,7 +237,6 @@ class SignalGenerator:
 		atr = _simple_atr(hist)
 		sl, tp = _default_sl_tp(close, side, self.config, atr=atr)
 
-		# Optional ML (Phase 4 stub)
 		ml_prob: Optional[float] = None
 		if self.config.use_ml:
 			ml_prob = self._optional_ml_predict(hist, ticker, timeframe)
