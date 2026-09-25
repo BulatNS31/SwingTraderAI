@@ -19,7 +19,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 import pandas as pd
 
@@ -35,9 +35,13 @@ from swingtraderai.backtesting.signal_generator import SignalGenerator
 
 
 class BacktestEngine:
-	def __init__(self, config: Optional[BacktestConfig] = None) -> None:
+	def __init__(
+		self,
+		config: Optional[BacktestConfig] = None,
+		signal_generator: Optional[Any] = None,
+	) -> None:
 		self.config = config or BacktestConfig()
-		self.signal_gen = SignalGenerator(self.config)
+		self.signal_gen = signal_generator or SignalGenerator(self.config)
 
 	def run(
 		self,
@@ -46,6 +50,8 @@ class BacktestEngine:
 		timeframe: str = "1h",
 		start: Optional[pd.Timestamp] = None,
 		end: Optional[pd.Timestamp] = None,
+		trade_start: Optional[pd.Timestamp] = None,
+		trade_end: Optional[pd.Timestamp] = None,
 	) -> BacktestResult:
 		"""Run a single-ticker backtest.
 
@@ -57,13 +63,21 @@ class BacktestEngine:
 		ticker, timeframe :
 			Labels stored on signals / trades.
 		start, end :
-			Optional time filters applied after warmup.
+			Optional hard filters on the dataframe (rows outside are dropped).
+		trade_start, trade_end :
+			Optional trading window. History *before* trade_start is kept for
+			warmup / features, but new entries are only queued inside the window.
+			Open positions may still exit after trade_end (managed until flat
+			or data end). Use this for walk-forward test segments.
 		"""
 		df = self._prepare(df, start, end)
 		if len(df) <= self.config.warmup_bars:
 			raise ValueError(
 				f"Not enough bars ({len(df)}) for warmup_bars={self.config.warmup_bars}"
 			)
+
+		ts_trade_start = pd.Timestamp(trade_start) if trade_start is not None else None
+		ts_trade_end = pd.Timestamp(trade_end) if trade_end is not None else None
 
 		pm = PositionManager(self.config)
 		signals_count = 0
@@ -73,12 +87,19 @@ class BacktestEngine:
 		for i in range(self.config.warmup_bars, n):
 			row = df.iloc[i]
 			bar_time = self._to_datetime(row["time"])
-			open, _, _, close = (
+			bar_ts = pd.Timestamp(bar_time)
+			open, high, low, close = (
 				float(row["open"]),
 				float(row["high"]),
 				float(row["low"]),
 				float(row["close"]),
 			)
+
+			in_trade_window = True
+			if ts_trade_start is not None and bar_ts < ts_trade_start:
+				in_trade_window = False
+			if ts_trade_end is not None and bar_ts > ts_trade_end:
+				in_trade_window = False
 
 			# 1–2. Point-in-time history & signal (known at close of this bar)
 			history = df.iloc[: i + 1]
@@ -90,52 +111,63 @@ class BacktestEngine:
 			)
 			signals_count += 1
 
-			# 3. Fill any pending entry from previous bar's signal (next_open)
+			# 3. Fill pending entry only inside / at trade window
+			#    (pending from last bar of window is still filled)
 			if self.config.entry_mode == EntryMode.NEXT_OPEN:
-				pm.try_fill_pending_entry(bar_open=open, bar_time=bar_time, bar_index=i)
+				if in_trade_window or (
+					ts_trade_start is not None and bar_ts >= ts_trade_start
+				):
+					# Allow fill if we are at or after trade_start
+					if ts_trade_end is None or bar_ts <= ts_trade_end:
+						pm.try_fill_pending_entry(
+							bar_open=open, bar_time=bar_time, bar_index=i
+						)
+					else:
+						pm.pending_entry = None
+				else:
+					pm.pending_entry = None
 
-			# 4. Manage open position on this bar's OHLC
-			# closed = pm.update_on_bar(
-			# 	bar_open=o,
-			# 	bar_high=h,
-			# 	bar_low=l,
-			# 	bar_close=c,
-			# 	bar_time=bar_time,
-			# 	signal=signal,
-			# )
-			# closed trade is already stored inside pm
+			# 4. Manage open position on this bar's OHLC (always, if open)
+			pm.update_on_bar(
+				bar_open=open,
+				bar_high=high,
+				bar_low=low,
+				bar_close=close,
+				bar_time=bar_time,
+				signal=signal if in_trade_window else None,
+			)
 
-			# 5. Queue new entry if flat and signal is actionable
-			if pm.position is None and signal.side != Side.NEUTRAL:
+			# 5. Queue new entry only inside trade window
+			if in_trade_window and pm.position is None and signal.side != Side.NEUTRAL:
 				if self.config.entry_mode == EntryMode.NEXT_OPEN:
 					pm.queue_entry(signal)
 				elif self.config.entry_mode == EntryMode.CURRENT_CLOSE:
-					# Explicit opt-in: fill at this bar's close
 					pm.queue_entry(signal)
 					pm.try_fill_pending_entry(
 						bar_open=close, bar_time=bar_time, bar_index=i
 					)
 
-			# 6. Mark-to-market
-			equity = pm.mark_to_market(close)
-			equity_curve.append(
-				EquityPoint(
-					time=bar_time,
-					equity=equity,
-					cash=pm.cash,
-					unrealized_pnl=(
-						pm.position.unrealized_pnl(close) if pm.position else 0.0
-					),
-					drawdown=pm.current_drawdown,
-					drawdown_pct=pm.current_drawdown_pct,
+			# 6. Mark-to-market (record only inside trade window for clean curves)
+			if in_trade_window or pm.position is not None:
+				equity = pm.mark_to_market(close)
+				equity_curve.append(
+					EquityPoint(
+						time=bar_time,
+						equity=equity,
+						cash=pm.cash,
+						unrealized_pnl=(
+							pm.position.unrealized_pnl(close) if pm.position else 0.0
+						),
+						drawdown=pm.current_drawdown,
+						drawdown_pct=pm.current_drawdown_pct,
+					)
 				)
-			)
 
 		# End-of-data forced close
 		last = df.iloc[-1]
 		last_time = self._to_datetime(last["time"])
 		pm.close_all(float(last["close"]), last_time)
-		# Final equity point already recorded, update last if needed
+		# Final equity point already recorded; update last if needed
 		if equity_curve:
 			equity_curve[-1] = EquityPoint(
 				time=last_time,
